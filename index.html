@@ -1,0 +1,3046 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão Inteligente UPA Rocinha</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A6FC4">
+<link rel="icon" type="image/x-icon" href="icons/icon-192.ico">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="UPA Rocinha">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue-main:#1A6FC4;--blue-dark:#1158A0;--blue-light:#2980D9;
+    --green:#27AE60;--green-light:#2ECC71;--green-dark:#1E8449;
+    --white:#FFFFFF;--gray-50:#F8FAFC;--gray-100:#F1F5F9;
+    --gray-200:#E2E8F0;--gray-300:#CBD5E1;--gray-400:#94A3B8;
+    --gray-500:#64748B;--gray-600:#475569;--gray-700:#334155;--gray-800:#1E293B;
+    --sidebar-w:56px;--sidebar-expanded:220px;--topbar-h:56px;
+    --font:'Nunito',sans-serif;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 12px rgba(0,0,0,.10);
+    --shadow-lg:0 8px 24px rgba(0,0,0,.12);--radius:10px;--radius-sm:6px;
+  }
+  body { font-family:var(--font); background:var(--gray-100); color:var(--gray-800); min-height:100vh; overflow-x:hidden; }
+
+  /* LOGIN */
+  #login-screen { min-height:100vh; background:linear-gradient(135deg,var(--blue-dark) 0%,var(--blue-main) 50%,var(--blue-light) 100%); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+  #login-screen::before { content:''; position:absolute; width:600px; height:600px; border-radius:50%; background:rgba(255,255,255,.04); top:-200px; right:-100px; }
+  #login-screen::after  { content:''; position:absolute; width:400px; height:400px; border-radius:50%; background:rgba(255,255,255,.04); bottom:-150px; left:-80px; }
+  .login-card { background:var(--white); border-radius:18px; padding:36px 40px 32px; width:420px; max-width:95vw; box-shadow:0 24px 60px rgba(0,0,0,.25); position:relative; z-index:1; animation:slideUp .5s ease; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+  .login-logo { text-align:center; margin-bottom:20px; }
+  .login-logo img { height:72px; object-fit:contain; }
+  .login-logo h1 { font-size:14px; font-weight:800; color:var(--blue-dark); line-height:1.3; margin-top:8px; }
+  .login-card h2 { font-size:17px; font-weight:800; color:var(--gray-800); margin-bottom:18px; text-align:center; }
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-size:11px; font-weight:700; color:var(--gray-600); margin-bottom:5px; text-transform:uppercase; letter-spacing:.4px; }
+  .form-group input, .form-group select { width:100%; padding:10px 14px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-family:var(--font); font-size:14px; color:var(--gray-800); background:var(--gray-50); transition:border-color .2s,box-shadow .2s; outline:none; appearance:none; }
+  .form-group input:focus, .form-group select:focus { border-color:var(--blue-main); background:#fff; box-shadow:0 0 0 3px rgba(26,111,196,.12); }
+  .btn-login { width:100%; padding:12px; background:linear-gradient(135deg,var(--blue-main),var(--blue-dark)); color:#fff; border:none; border-radius:var(--radius-sm); font-family:var(--font); font-size:15px; font-weight:700; cursor:pointer; margin-top:6px; transition:transform .15s,box-shadow .15s; box-shadow:0 4px 14px rgba(26,111,196,.35); }
+  .btn-login:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(26,111,196,.4); }
+  .login-error { background:#FEE2E2; color:#B91C1C; border-radius:var(--radius-sm); padding:9px 14px; font-size:13px; margin-top:10px; display:none; text-align:center; }
+
+  /* APP SHELL */
+  #app { display:none; min-height:100vh; }
+
+  /* TOP BAR */
+  .topbar { position:fixed; top:0; left:0; right:0; height:var(--topbar-h); background:var(--white); border-bottom:1px solid var(--gray-200); display:flex; align-items:center; padding:0 16px; z-index:200; box-shadow:var(--shadow-sm); gap:12px; }
+  .topbar-logo { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .topbar-logo img { height:38px; object-fit:contain; }
+  .topbar-title { flex:1; text-align:center; font-size:14px; font-weight:800; color:var(--blue-dark); letter-spacing:-.1px; }
+  .topbar-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .badge-cargo { background:var(--green); color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; max-width:150px; overflow:hidden; text-overflow:ellipsis; }
+  .user-avatar { width:36px; height:36px; background:linear-gradient(135deg,var(--blue-main),var(--blue-dark)); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:12px; cursor:pointer; position:relative; flex-shrink:0; }
+  .user-name-top { font-size:13px; font-weight:700; color:var(--gray-700); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .user-dropdown { position:absolute; top:calc(100% + 8px); right:0; background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); width:160px; overflow:hidden; display:none; z-index:300; }
+  .user-dropdown.open { display:block; }
+  .user-dropdown button { width:100%; padding:11px 16px; background:none; border:none; font-family:var(--font); font-size:13px; font-weight:600; color:#B91C1C; display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .user-dropdown button:hover { background:#FEE2E2; }
+
+  /* SIDEBAR */
+  .sidebar { position:fixed; top:var(--topbar-h); left:0; bottom:0; width:var(--sidebar-w); background:var(--white); border-right:1px solid var(--gray-200); z-index:150; transition:width .25s ease; overflow:hidden; display:flex; flex-direction:column; }
+  .sidebar.expanded { width:var(--sidebar-expanded); }
+  .sidebar-toggle { padding:14px 0; display:flex; align-items:center; justify-content:center; cursor:pointer; border-bottom:1px solid var(--gray-100); color:var(--gray-400); flex-shrink:0; }
+  .sidebar-toggle:hover { color:var(--blue-main); }
+  .sidebar-nav { flex:1; overflow-y:auto; overflow-x:hidden; padding:6px 0; }
+  .sidebar-nav::-webkit-scrollbar { width:3px; }
+  .sidebar-nav::-webkit-scrollbar-thumb { background:var(--gray-200); }
+  .nav-item { display:flex; align-items:center; padding:9px 0 9px 16px; gap:12px; cursor:pointer; color:var(--gray-500); font-size:12px; font-weight:600; white-space:nowrap; transition:background .15s,color .15s; position:relative; }
+  .nav-item:hover { background:var(--gray-50); color:var(--blue-main); }
+  .nav-item.active { color:var(--blue-main); background:#EBF4FF; }
+  .nav-item.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--blue-main); border-radius:0 3px 3px 0; }
+  .nav-item i { font-size:15px; width:24px; text-align:center; flex-shrink:0; }
+  .nav-label { opacity:0; transition:opacity .2s; white-space:nowrap; }
+  .sidebar.expanded .nav-label { opacity:1; }
+
+  /* MAIN */
+  .main { margin-top:var(--topbar-h); margin-left:var(--sidebar-w); transition:margin-left .25s ease; min-height:calc(100vh - var(--topbar-h)); }
+  .main.sidebar-open { margin-left:var(--sidebar-expanded); }
+
+  /* BANNER */
+  .banner { background:linear-gradient(120deg,var(--blue-dark) 0%,var(--blue-main) 60%,var(--blue-light) 100%); padding:18px 22px; display:flex; gap:14px; align-items:flex-start; min-height:110px; }
+  .banner-left { flex:1; }
+  .banner-greeting { font-size:11px; font-weight:600; color:rgba(255,255,255,.7); margin-bottom:3px; text-transform:uppercase; letter-spacing:.5px; }
+  .banner-name { font-size:22px; font-weight:800; color:#fff; margin-bottom:3px; }
+  .banner-sub { font-size:12px; color:rgba(255,255,255,.75); }
+  /* CAROUSEL */
+  .banner-cards { flex-shrink:0; max-width:54%; position:relative; overflow:hidden; }
+  .carousel-track { display:flex; gap:10px; transition:transform .45s cubic-bezier(.4,0,.2,1); will-change:transform; }
+  .notice-card { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); border-radius:var(--radius); padding:11px 14px; min-width:185px; max-width:185px; backdrop-filter:blur(6px); flex-shrink:0; }
+  .notice-card .nc-tag { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,.7); margin-bottom:3px; }
+  .notice-card .nc-title { font-size:12px; font-weight:700; color:#fff; margin-bottom:3px; line-height:1.35; }
+  .notice-card .nc-date { font-size:11px; color:rgba(255,255,255,.6); }
+  .notice-card.special { border-color:var(--green-light); }
+  .notice-card.special .nc-tag { color:var(--green-light); }
+  .carousel-dots { display:flex; gap:5px; justify-content:center; margin-top:7px; }
+  .carousel-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.35); cursor:pointer; transition:background .2s,transform .2s; border:none; padding:0; }
+  .carousel-dot.active { background:#fff; transform:scale(1.3); }
+
+  /* CONTENT GRID */
+  .content-grid { display:grid; grid-template-columns:1fr 360px; min-height:calc(100vh - var(--topbar-h) - 110px); }
+  .left-panel { padding:18px; }
+  .section-title { font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--gray-200); }
+
+  /* MODULES GRID */
+  .modules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:10px; margin-bottom:20px; }
+  .module-btn { background:var(--white); border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; transition:transform .15s,border-color .15s,box-shadow .15s; text-align:center; position:relative; overflow:hidden; }
+  .module-btn::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,var(--blue-main),var(--blue-light)); opacity:0; transition:opacity .2s; }
+  .module-btn:hover { transform:translateY(-2px); border-color:var(--blue-main); box-shadow:var(--shadow-md); }
+  .module-btn:hover::before { opacity:.07; }
+  .module-btn .mb-icon { width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; position:relative; z-index:1; flex-shrink:0; }
+  .module-btn .mb-label { font-size:11px; font-weight:700; color:var(--gray-700); line-height:1.3; position:relative; z-index:1; }
+  .module-btn:hover .mb-label { color:var(--blue-dark); }
+
+  /* Module icon colors */
+  .c-home{background:#EBF4FF;color:var(--blue-main)}
+  .c-rh{background:#FEF3C7;color:#D97706}
+  .c-avisos{background:#FEE2E2;color:#DC2626}
+  .c-dieta{background:#D1FAE5;color:var(--green-dark)}
+  .c-proto{background:#EDE9FE;color:#7C3AED}
+  .c-sistemas{background:#DBEAFE;color:#2563EB}
+  .c-vent{background:#FEF9C3;color:#CA8A04}
+  .c-docs{background:#F1F5F9;color:var(--gray-600)}
+  .c-treino{background:#FCE7F3;color:#DB2777}
+  .c-farmacia{background:#CFFAFE;color:#0E7490}
+  .c-almox{background:#D1FAE5;color:#065F46}
+  .c-escala{background:#FED7AA;color:#C2410C}
+  .c-calc{background:#F3E8FF;color:#7C3AED}
+  .c-calcmed{background:#ECFEFF;color:#155E75}
+  .c-safety{background:#EFF6FF;color:#1D4ED8}
+  .c-evento{background:#FFF1F2;color:#9F1239}
+  .c-salas{background:#F0FDF4;color:#166534}
+
+  /* RIGHT PANEL */
+  .right-panel { background:var(--white); border-left:1px solid var(--gray-200); display:flex; flex-direction:column; }
+  .right-panel-header { padding:13px 16px; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; }
+  .right-panel-header h3 { font-size:13px; font-weight:800; color:var(--gray-700); }
+  .tab-group { display:flex; gap:4px; }
+  .tab-btn { padding:5px 11px; border-radius:20px; border:none; background:none; font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; color:var(--gray-500); transition:background .15s,color .15s; }
+  .tab-btn.active { background:var(--blue-main); color:#fff; }
+  .right-panel-body { flex:1; padding:10px 14px; overflow-y:auto; }
+  .shift-item { display:flex; align-items:flex-start; gap:9px; padding:9px 0; border-bottom:1px solid var(--gray-100); cursor:pointer; border-radius:var(--radius-sm); padding-left:5px; }
+  .shift-item:hover { background:var(--gray-50); }
+  .shift-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .dot-green{background:var(--green)} .dot-yellow{background:#F59E0B} .dot-red{background:#EF4444} .dot-blue{background:var(--blue-main)}
+  .shift-info { flex:1; min-width:0; }
+  .shift-name { font-size:13px; font-weight:700; color:var(--gray-800); }
+  .shift-detail { font-size:11px; color:var(--gray-500); margin-top:1px; }
+  .shift-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; flex-shrink:0; align-self:flex-start; margin-top:2px; }
+  .sb-obs{background:#DBEAFE;color:#1E40AF} .sb-alta{background:#D1FAE5;color:#065F46} .sb-critico{background:#FEE2E2;color:#991B1B} .sb-aguarda{background:#FEF3C7;color:#92400E}
+
+  /* MODULE VIEWS */
+  .module-view { display:none; padding:18px; }
+  .module-view.active { display:block; }
+  .mv-header { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .mv-back { background:none; border:none; font-size:20px; cursor:pointer; color:var(--gray-500); transition:color .15s; }
+  .mv-back:hover { color:var(--blue-main); }
+  .mv-title { font-size:17px; font-weight:800; color:var(--gray-800); }
+
+  /* TABLE */
+  .data-table { width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); font-size:13px; }
+  .data-table th { background:var(--gray-50); padding:10px 13px; text-align:left; font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid var(--gray-200); white-space:nowrap; }
+  .data-table td { padding:9px 13px; border-bottom:1px solid var(--gray-100); color:var(--gray-700); vertical-align:middle; }
+  .data-table tr:last-child td { border-bottom:none; }
+  .data-table tr:hover td { background:var(--gray-50); }
+  .status-badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; }
+  .s-ok{background:#D1FAE5;color:#065F46} .s-warn{background:#FEF3C7;color:#92400E} .s-crit{background:#FEE2E2;color:#991B1B} .s-info{background:#DBEAFE;color:#1E40AF}
+
+  /* Escala grid */
+  .escala-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; }
+  .escala-card { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .escala-card-header { background:linear-gradient(135deg,var(--blue-main),var(--blue-dark)); color:#fff; padding:7px 11px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; }
+  .escala-card-body { padding:9px 11px; }
+  .escala-name { font-size:12px; color:var(--gray-700); padding:3px 0; border-bottom:1px solid var(--gray-100); }
+  .escala-name:last-child { border-bottom:none; }
+
+  /* Indicadores */
+  .indicadores-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+  .ind-card { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); padding:13px; box-shadow:var(--shadow-sm); }
+  .ind-card-label { font-size:11px; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+  .ind-card-value { font-size:24px; font-weight:800; color:var(--blue-dark); line-height:1; }
+
+  /* Spinner / Empty */
+  .spinner { display:flex; align-items:center; justify-content:center; padding:36px; color:var(--gray-400); font-size:13px; gap:10px; }
+  .spin { animation:spin .8s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .empty-state { text-align:center; padding:36px 20px; color:var(--gray-400); }
+  .empty-state i { font-size:32px; margin-bottom:8px; display:block; }
+  .btn-refresh { padding:6px 13px; background:none; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-family:var(--font); font-size:12px; font-weight:600; color:var(--gray-600); cursor:pointer; display:flex; align-items:center; gap:6px; transition:border-color .15s,color .15s; }
+  .btn-refresh:hover { border-color:var(--blue-main); color:var(--blue-main); }
+
+  /* Safety Huddle */
+  .huddle-section { margin-bottom:20px; }
+  .huddle-section h3 { font-size:13px; font-weight:800; color:var(--blue-dark); margin-bottom:10px; display:flex; align-items:center; gap:7px; }
+  .huddle-item { display:flex; align-items:center; gap:10px; padding:10px 13px; background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-sm); margin-bottom:7px; font-size:13px; font-weight:600; color:var(--gray-700); cursor:pointer; transition:background .15s; }
+  .huddle-item.done { background:#F0FDF4; border-color:#BBF7D0; color:#166534; text-decoration:line-through; }
+  .huddle-check { width:22px; height:22px; border-radius:5px; border:2px solid var(--gray-300); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; transition:background .15s,border-color .15s; }
+  .huddle-item.done .huddle-check { background:var(--green); border-color:var(--green); color:#fff; }
+
+  /* Salas */
+  .salas-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+  .sala-card { background:#fff; border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:14px; text-align:center; box-shadow:var(--shadow-sm); }
+  .sala-card .sala-icon { font-size:28px; margin-bottom:7px; }
+  .sala-card .sala-name { font-size:12px; font-weight:800; color:var(--gray-800); margin-bottom:4px; }
+  .sala-card .sala-status { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+
+  /* VENTILATORY TABLE */
+  .vent-table-wrap { overflow-x:auto; border-radius:10px; border:1px solid #BAE6FD; }
+  .vent-table { width:100%; border-collapse:collapse; font-size:11px; min-width:480px; }
+  .vent-table th { background:#0369A1; color:#fff; padding:7px 6px; font-weight:800; text-align:center; white-space:nowrap; }
+  .vent-table td { padding:6px; text-align:center; border-bottom:1px solid #E0F2FE; background:#fff; }
+  .vent-table tr:nth-child(even) td { background:#F0F9FF; }
+  .vent-table .faixa-nome { font-weight:800; color:#0369A1; }
+  .vent-table .faixa-idade { font-size:10px; color:#64748B; }
+  .vent-aviso { background:#FFFBEB; border:1px solid #FDE68A; border-radius:var(--radius); padding:12px 14px; font-size:12px; color:#92400E; line-height:1.7; margin-top:12px; }
+  .vent-result-box { background:#fff; border:1.5px solid #BBF7D0; border-radius:10px; padding:12px; }
+  .vent-result-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #F0FDF4; font-size:12px; }
+  .vent-result-label { color:#166534; font-weight:600; }
+  .vent-result-val { font-weight:900; color:#14532D; }
+  .calc-label { display:block; font-size:10px; font-weight:700; color:var(--gray-600); text-transform:uppercase; margin-bottom:4px; }
+  .calc-input, .calc-select { width:100%; padding:8px 10px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-family:var(--font); font-size:13px; outline:none; }
+
+
+  /* Calc Medicação */
+  .calc-form { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius); padding:18px; margin-bottom:14px; }
+  .calc-form label { display:block; font-size:11px; font-weight:700; color:var(--gray-600); text-transform:uppercase; margin-bottom:5px; margin-top:12px; }
+  .calc-form label:first-child { margin-top:0; }
+  .calc-form input, .calc-form select { width:100%; padding:9px 12px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-family:var(--font); font-size:14px; color:var(--gray-800); outline:none; }
+  .calc-form input:focus, .calc-form select:focus { border-color:var(--blue-main); }
+  .calc-result { background:#EBF4FF; border:1px solid #BFDBFE; border-radius:var(--radius); padding:16px; margin-top:12px; text-align:center; }
+  .calc-result-val { font-size:28px; font-weight:800; color:var(--blue-dark); }
+  .calc-result-lbl { font-size:12px; color:var(--gray-500); margin-top:3px; }
+  .btn-calc { width:100%; padding:11px; background:linear-gradient(135deg,var(--blue-main),var(--blue-dark)); color:#fff; border:none; border-radius:var(--radius-sm); font-family:var(--font); font-size:14px; font-weight:700; cursor:pointer; margin-top:10px; }
+
+  /* Evento Adverso — external link card */
+  .ext-link-card { display:flex; align-items:center; gap:16px; background:#FFF1F2; border:1.5px solid #FECACA; border-radius:var(--radius); padding:18px; margin-bottom:12px; text-decoration:none; color:var(--gray-800); transition:box-shadow .15s; }
+  .ext-link-card:hover { box-shadow:var(--shadow-md); }
+  .ext-link-card .el-icon { font-size:32px; flex-shrink:0; }
+  .ext-link-card .el-body .el-title { font-size:15px; font-weight:800; color:#9F1239; }
+  .ext-link-card .el-body .el-sub { font-size:12px; color:var(--gray-500); margin-top:3px; }
+  .ext-link-card .el-arrow { margin-left:auto; font-size:18px; color:#9F1239; }
+
+  /* Protocolos */
+  .proto-btn { display:flex; align-items:center; gap:13px; padding:13px 15px; border-radius:var(--radius); border:1.5px solid var(--gray-200); background:#fff; cursor:pointer; margin-bottom:8px; text-align:left; font-family:var(--font); font-size:13px; font-weight:700; transition:box-shadow .15s,transform .15s; }
+  .proto-btn:hover { box-shadow:var(--shadow-md); transform:translateX(3px); }
+  .proto-btn .pb-emoji { font-size:22px; }
+  .proto-btn .pb-text .pb-name { font-weight:800; font-size:13px; }
+  .proto-btn .pb-text .pb-desc { font-size:11px; font-weight:500; color:var(--gray-500); margin-top:2px; }
+
+  /* Fluxo step */
+  .fluxo-step { display:flex; align-items:flex-start; gap:11px; margin:8px 0; padding:11px 13px; background:#fff; border-radius:var(--radius-sm); border:1px solid var(--gray-200); }
+  .fluxo-num { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; color:#fff; flex-shrink:0; }
+  .fluxo-title { font-weight:800; font-size:13px; color:var(--gray-800); }
+  .fluxo-desc { font-size:12px; color:var(--gray-500); margin-top:2px; line-height:1.5; }
+  .fluxo-arrow { text-align:center; color:var(--gray-400); font-size:18px; margin:2px 0; }
+  .fluxo-alerta { padding:10px 13px; border-radius:var(--radius-sm); font-size:12px; font-weight:700; margin:10px 0; }
+  .btn-back-proto { padding:8px 18px; background:var(--gray-200); border:none; border-radius:var(--radius-sm); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; margin-top:10px; }
+  .btn-back-proto:hover { background:var(--gray-300); }
+
+  #home-view { padding:0; }
+
+  @media(max-width:900px) { .content-grid{grid-template-columns:1fr} .right-panel{border-left:none;border-top:1px solid var(--gray-200)} .banner-cards{max-width:100%} }
+  @media(max-width:600px) { .topbar-title{font-size:12px} .user-name-top{display:none} .badge-cargo{display:none} .banner-name{font-size:18px} .banner{flex-direction:column} .modules-grid{grid-template-columns:repeat(3,1fr)} }
+
+  /* ======================================================
+     CHAT INTERNO — ESTILOS
+  ====================================================== */
+  /* Botão flutuante estilo WhatsApp */
+  #chat-fab {
+    position:fixed; bottom:22px; right:22px; z-index:1000;
+    width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(135deg,var(--blue-main),var(--blue-dark));
+    box-shadow:0 4px 18px rgba(26,111,196,.45);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; border:none; color:#fff; font-size:22px;
+    transition:transform .2s, box-shadow .2s;
+  }
+  #chat-fab:hover { transform:scale(1.08); box-shadow:0 6px 24px rgba(26,111,196,.55); }
+  #chat-fab .chat-badge {
+    position:absolute; top:-3px; right:-3px;
+    background:#EF4444; color:#fff; font-size:10px; font-weight:800;
+    width:18px; height:18px; border-radius:50%;
+    display:none; align-items:center; justify-content:center;
+    border:2px solid #fff;
+  }
+  #chat-fab .chat-badge.show { display:flex; }
+
+  /* Janela do chat */
+  #chat-window {
+    position:fixed; bottom:88px; right:22px; z-index:999;
+    width:360px; max-width:calc(100vw - 32px);
+    height:520px; max-height:calc(100vh - 120px);
+    background:#fff; border-radius:18px;
+    box-shadow:0 12px 40px rgba(0,0,0,.18);
+    display:none; flex-direction:column; overflow:hidden;
+    animation:chatSlideUp .25s ease;
+  }
+  #chat-window.open { display:flex; }
+  @keyframes chatSlideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Header do chat */
+  .chat-header {
+    background:linear-gradient(135deg,var(--blue-dark),var(--blue-main));
+    padding:12px 14px; display:flex; align-items:center; gap:10px; flex-shrink:0;
+  }
+  .chat-header-info { flex:1; min-width:0; }
+  .chat-header-title { font-size:14px; font-weight:800; color:#fff; }
+  .chat-header-sub { font-size:11px; color:rgba(255,255,255,.7); margin-top:1px; }
+  .chat-close-btn {
+    background:rgba(255,255,255,.15); border:none; color:#fff;
+    width:28px; height:28px; border-radius:50%; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+    transition:background .15s; flex-shrink:0;
+  }
+  .chat-close-btn:hover { background:rgba(255,255,255,.25); }
+
+  /* Abas do chat */
+  .chat-tabs {
+    display:flex; border-bottom:1px solid var(--gray-200); background:#fff; flex-shrink:0;
+  }
+  .chat-tab {
+    flex:1; padding:9px 6px; border:none; background:none; font-family:var(--font);
+    font-size:11px; font-weight:700; color:var(--gray-500); cursor:pointer;
+    border-bottom:2px solid transparent; transition:color .15s,border-color .15s;
+  }
+  .chat-tab.active { color:var(--blue-main); border-bottom-color:var(--blue-main); }
+
+  /* Painel de mensagens */
+  .chat-msgs {
+    flex:1; overflow-y:auto; padding:12px; display:flex;
+    flex-direction:column; gap:8px; background:#F0F4F8;
+  }
+  .chat-msgs::-webkit-scrollbar { width:4px; }
+  .chat-msgs::-webkit-scrollbar-thumb { background:var(--gray-300); border-radius:4px; }
+
+  /* Balão de mensagem */
+  .chat-msg { display:flex; gap:8px; align-items:flex-end; max-width:92%; }
+  .chat-msg.mine { align-self:flex-end; flex-direction:row-reverse; }
+  .chat-msg.other { align-self:flex-start; }
+  .chat-msg-avatar {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:800; color:#fff;
+    background:linear-gradient(135deg,var(--blue-main),var(--blue-dark));
+    overflow:hidden;
+  }
+  .chat-msg-avatar img { width:100%; height:100%; object-fit:cover; }
+  .chat-bubble {
+    padding:8px 12px; border-radius:14px; max-width:240px;
+    font-size:13px; line-height:1.45; word-break:break-word;
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
+  }
+  .chat-msg.mine .chat-bubble {
+    background:var(--blue-main); color:#fff;
+    border-bottom-right-radius:4px;
+  }
+  .chat-msg.other .chat-bubble {
+    background:#fff; color:var(--gray-800);
+    border-bottom-left-radius:4px;
+  }
+  .chat-msg-meta {
+    font-size:10px; color:rgba(255,255,255,.65); margin-top:3px; text-align:right;
+  }
+  .chat-msg.other .chat-msg-meta { color:var(--gray-400); text-align:left; }
+  .chat-msg-sender { font-size:10px; font-weight:800; color:var(--blue-dark); margin-bottom:2px; }
+  .chat-msg.mine .chat-msg-sender { display:none; }
+
+  /* Sistema */
+  .chat-system-msg {
+    text-align:center; font-size:11px; color:var(--gray-400); padding:4px 0;
+    font-style:italic;
+  }
+
+  /* Input */
+  .chat-input-area {
+    display:flex; align-items:center; gap:8px; padding:10px 12px;
+    background:#fff; border-top:1px solid var(--gray-200); flex-shrink:0;
+  }
+  .chat-input-area input {
+    flex:1; padding:9px 13px; border:1.5px solid var(--gray-200); border-radius:22px;
+    font-family:var(--font); font-size:13px; color:var(--gray-800); outline:none;
+    transition:border-color .2s;
+  }
+  .chat-input-area input:focus { border-color:var(--blue-main); }
+  .chat-send-btn {
+    width:38px; height:38px; border-radius:50%; background:var(--blue-main);
+    border:none; color:#fff; cursor:pointer; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+    transition:background .15s, transform .1s;
+  }
+  .chat-send-btn:hover { background:var(--blue-dark); transform:scale(1.05); }
+
+  /* Painel de profissionais */
+  .chat-people { flex:1; overflow-y:auto; padding:10px; }
+  .chat-person {
+    display:flex; align-items:center; gap:10px; padding:9px 10px;
+    border-radius:10px; cursor:pointer; transition:background .15s;
+    border-bottom:1px solid var(--gray-100);
+  }
+  .chat-person:hover { background:var(--gray-50); }
+  .chat-person-avatar {
+    width:38px; height:38px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; color:#fff; overflow:hidden;
+    background:linear-gradient(135deg,var(--blue-main),var(--blue-dark));
+  }
+  .chat-person-avatar img { width:100%; height:100%; object-fit:cover; }
+  .chat-person-info { flex:1; min-width:0; }
+  .chat-person-name { font-size:13px; font-weight:700; color:var(--gray-800); }
+  .chat-person-role { font-size:11px; color:var(--gray-500); margin-top:1px; }
+  .chat-person-unread {
+    background:var(--blue-main); color:#fff; font-size:10px; font-weight:800;
+    min-width:18px; height:18px; border-radius:9px; padding:0 4px;
+    display:none; align-items:center; justify-content:center;
+  }
+  .chat-person-unread.show { display:flex; }
+
+  /* Perfil — upload de foto */
+  .chat-profile-panel { padding:16px; }
+  .chat-profile-photo-wrap {
+    display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .chat-profile-photo-big {
+    width:80px; height:80px; border-radius:50%; overflow:hidden;
+    background:linear-gradient(135deg,var(--blue-main),var(--blue-dark));
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; font-weight:800; color:#fff;
+    border:3px solid var(--blue-main);
+  }
+  .chat-profile-photo-big img { width:100%; height:100%; object-fit:cover; }
+  .chat-photo-btn {
+    padding:7px 16px; background:none; border:1.5px solid var(--blue-main);
+    border-radius:20px; font-family:var(--font); font-size:12px; font-weight:700;
+    color:var(--blue-main); cursor:pointer; transition:background .15s,color .15s;
+  }
+  .chat-photo-btn:hover { background:var(--blue-main); color:#fff; }
+  .chat-profile-info { background:var(--gray-50); border-radius:10px; padding:13px; }
+  .chat-profile-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--gray-200); font-size:13px; }
+  .chat-profile-row:last-child { border-bottom:none; }
+  .chat-profile-label { color:var(--gray-500); font-weight:600; font-size:12px; }
+  .chat-profile-val { color:var(--gray-800); font-weight:700; }
+
+  /* DM header */
+  .chat-dm-header {
+    display:flex; align-items:center; gap:10px; padding:10px 12px;
+    border-bottom:1px solid var(--gray-200); background:#fff; flex-shrink:0;
+  }
+  .chat-dm-back {
+    background:none; border:none; cursor:pointer; color:var(--gray-500);
+    font-size:16px; padding:4px; transition:color .15s;
+  }
+  .chat-dm-back:hover { color:var(--blue-main); }
+
+  /* Online dot */
+  .chat-online-dot {
+    width:10px; height:10px; border-radius:50%; background:#27AE60;
+    border:2px solid #fff; position:absolute; bottom:1px; right:1px;
+  }
+  .chat-person-avatar { position:relative; }
+  .chat-msg-avatar { position:relative; }
+
+  /* date separator */
+  .chat-date-sep {
+    text-align:center; font-size:10px; color:var(--gray-400);
+    background:rgba(0,0,0,.06); padding:3px 10px; border-radius:20px;
+    align-self:center; margin:4px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="data:image/jpeg;base64,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" alt="UPA Rocinha">
+      <h1>GESTÃO INTELIGENTE UPA ROCINHA</h1>
+    </div>
+    <h2>Acesso ao Sistema</h2>
+    <div class="form-group"><label>Matrícula</label><input type="text" id="inp-matricula" placeholder="Ex: 12345" autocomplete="off"></div>
+    <div class="form-group"><label>Nome completo</label><input type="text" id="inp-nome" placeholder="Seu nome completo" autocomplete="off"></div>
+    <div class="form-group">
+      <label>Função / Cargo</label>
+      <select id="inp-funcao">
+        <option value="">Selecione...</option>
+        <option>Médico</option><option>Pediatra</option><option>Enfermeiro</option>
+        <option>Técnico de Enfermagem</option><option>Farmacêutico</option>
+        <option>Técnico de Farmácia</option><option>Recepcionista</option>
+        <option>Administrativo</option><option>Almoxarife</option>
+        <option>Radiologista</option><option>Técnico de Radiologia</option>
+        <option>Laboratorista</option><option>ASG</option><option>Vigilante</option>
+        <option>Maqueiro</option><option>NIR</option><option>SESMT</option>
+        <option>TI</option><option>Manutenção</option><option>Refrigeração</option>
+        <option>Ar Condicionado</option><option>Gestor / Direção</option>
+      </select>
+    </div>
+    <button class="btn-login" onclick="doLogin()"><i class="fas fa-right-to-bracket" style="margin-right:8px"></i>Entrar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <img src="data:image/jpeg;base64,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" alt="UPA Rocinha">
+    </div>
+    <div class="topbar-title">GESTÃO INTELIGENTE UPA ROCINHA</div>
+    <div class="topbar-right">
+      <span class="badge-cargo" id="top-cargo">—</span>
+      <span class="user-name-top" id="top-nome">—</span>
+      <div class="user-avatar" id="avatar-btn" onclick="toggleDropdown()">
+        <span id="avatar-initials">??</span>
+        <img id="avatar-photo" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;top:0;left:0;">
+        <div class="user-dropdown" id="user-dropdown">
+          <button onclick="doLogout()"><i class="fas fa-right-from-bracket"></i>Sair</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars" style="font-size:18px"></i></div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+    <!-- BANNER -->
+    <div class="banner">
+      <div class="banner-left">
+        <div class="banner-greeting" id="banner-greeting">Bem-vindo(a)</div>
+        <div class="banner-name" id="banner-name">—</div>
+        <div class="banner-sub" id="banner-sub">Dê uma boa tarde para sua equipe!</div>
+      </div>
+      <div class="banner-cards" id="banner-cards-wrap">
+        <div class="carousel-track" id="banner-cards"></div>
+        <div class="carousel-dots" id="carousel-dots"></div>
+      </div>
+    </div>
+
+    <!-- HOME VIEW -->
+    <div id="home-view">
+      <div class="content-grid">
+        <div class="left-panel">
+          <div class="section-title">Módulos do Sistema</div>
+          <div class="modules-grid" id="modules-grid"></div>
+        </div>
+        <div class="right-panel">
+          <div class="right-panel-header">
+            <h3><i class="fas fa-rotate" style="margin-right:6px;color:#059669"></i>Passagem de Plantão</h3>
+            <div class="tab-group">
+              <button class="tab-btn active" onclick="selectTab(this,'tab-plantao')">Kanban</button>
+              <button class="tab-btn" onclick="selectTab(this,'tab-atend')">Atendimento</button>
+            </div>
+          </div>
+          <div class="right-panel-body" style="padding:0;">
+            <!-- TAB KANBAN / PASSAGEM DE PLANTÃO -->
+            <div id="tab-plantao" style="display:flex;flex-direction:column;height:100%;">
+
+              <!-- Resumo de turno -->
+              <div id="pp_kanbanResumo" style="padding:10px 14px 0;font-size:11px;font-weight:700;color:#475569;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span id="pp_turnoTag" style="background:#f0fdf4;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;"></span>
+                <span id="pp_kanbanCounts"></span>
+              </div>
+
+              <!-- Colunas kanban -->
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 10px 6px;flex:1;overflow-y:auto;">
+                <div>
+                  <div style="font-size:10px;font-weight:900;color:#dc2626;letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
+                    🔴 Crítico <span id="ppk_cnt_critico" style="background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:20px;font-size:10px;">0</span>
+                  </div>
+                  <div id="ppk_col_critico"></div>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-weight:900;color:#d97706;letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
+                    🟡 Atenção <span id="ppk_cnt_atencao" style="background:#fef9c3;color:#854d0e;padding:1px 6px;border-radius:20px;font-size:10px;">0</span>
+                  </div>
+                  <div id="ppk_col_atencao"></div>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-weight:900;color:#059669;letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;">
+                    🟢 Estável <span id="ppk_cnt_estavel" style="background:#f0fdf4;color:#166534;padding:1px 6px;border-radius:20px;font-size:10px;">0</span>
+                  </div>
+                  <div id="ppk_col_estavel"></div>
+                </div>
+              </div>
+
+              <!-- Botão abrir modal -->
+              <div style="padding:8px 10px;border-top:1px solid var(--gray-100);">
+                <button onclick="ppAbrirModal()" style="width:100%;padding:9px;background:linear-gradient(135deg,#059669,#065f46);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;">
+                  <i class="fas fa-plus"></i> Registrar / Gerenciar Plantão
+                </button>
+              </div>
+            </div>
+
+            <!-- TAB ATENDIMENTO -->
+            <div id="tab-atend" style="display:none;padding:10px 14px;">
+              <div class="spinner"><i class="fas fa-circle-notch spin"></i> Carregando...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== MODAL PASSAGEM DE PLANTÃO ==================== -->
+        <div id="pp_overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center;padding:16px;">
+          <div style="background:#fff;border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:22px 24px;position:relative;">
+
+            <button onclick="ppFecharModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1;">×</button>
+            <h2 style="text-align:center;color:#059669;margin:0 0 16px;font-size:16px;">🔁 Passagem de Plantão</h2>
+
+            <!-- TELA SENHA -->
+            <div id="pp_telaSenha">
+              <p style="text-align:center;font-size:13px;color:#475569;margin-bottom:14px;">Acesso restrito — ADM NIR e Gestores</p>
+              <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Senha de acesso</label>
+              <input id="pp_senha" type="password" placeholder="Digite a senha"
+                style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:14px;outline:none;margin-bottom:8px;"
+                onkeydown="if(event.key==='Enter')ppVerificarSenha()">
+              <div id="pp_senhaErro" style="display:none;color:#dc2626;font-size:12px;font-weight:700;text-align:center;margin-bottom:8px;">⚠️ Senha incorreta.</div>
+              <button onclick="ppVerificarSenha()" style="width:100%;padding:12px;background:#059669;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;">ENTRAR</button>
+              <button onclick="ppFecharModal()" style="width:100%;padding:10px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-top:7px;">Cancelar</button>
+            </div>
+
+            <!-- TELA MENU -->
+            <div id="pp_telaMenu" style="display:none;">
+              <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <button onclick="ppIrParaNovoCard()" style="flex:1;padding:11px;background:#059669;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;">➕ Novo card</button>
+                <button onclick="ppIrParaHistorico()" style="flex:1;padding:11px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;font-family:var(--font);font-size:12px;font-weight:800;cursor:pointer;">📋 Histórico</button>
+              </div>
+              <div id="pp_resumoTurno" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:11px;margin-bottom:12px;font-size:12px;color:#166534;font-weight:600;"></div>
+              <div id="pp_listaCardsTurno" style="max-height:320px;overflow-y:auto;"></div>
+              <button onclick="ppFecharModal()" style="width:100%;padding:10px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;">Fechar</button>
+            </div>
+
+            <!-- TELA STEPPER -->
+            <div id="pp_telaStepper" style="display:none;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                <span id="pp_stepLabel" style="font-size:11px;color:#64748b;font-weight:700;"></span>
+                <span id="pp_stepTitulo" style="font-size:11px;color:#059669;font-weight:900;"></span>
+              </div>
+              <div style="background:#e2e8f0;border-radius:4px;height:4px;margin-bottom:16px;">
+                <div id="pp_progressBar" style="height:4px;border-radius:4px;background:#059669;transition:width .3s;"></div>
+              </div>
+
+              <!-- Etapa 1 -->
+              <div id="pp_etapa1">
+                <div style="margin-bottom:11px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Seu nome (ADM NIR)</label>
+                  <input id="pp_nirNome" type="text" placeholder="Ex: Ana Silva" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;">
+                </div>
+                <div style="margin-bottom:11px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Turno sendo passado</label>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                    <button class="ppChip ppChipAtivo" id="ppTurno_Manha" onclick="ppSelecionarChip('turno','Manhã',this)">🌅 Manhã</button>
+                    <button class="ppChip" id="ppTurno_Tarde" onclick="ppSelecionarChip('turno','Tarde',this)">☀️ Tarde</button>
+                    <button class="ppChip" id="ppTurno_Noite" onclick="ppSelecionarChip('turno','Noite',this)">🌙 Noite</button>
+                  </div>
+                </div>
+                <div style="margin-bottom:4px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Lotação da unidade</label>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                    <button class="ppChip ppChipVerde ppChipAtivo" id="ppLot_Normal" onclick="ppSelecionarChip('lotacao','Normal',this)">🟢 Normal</button>
+                    <button class="ppChip ppChipAmbar" id="ppLot_Alerta" onclick="ppSelecionarChip('lotacao','Em alerta',this)">🟡 Em alerta</button>
+                    <button class="ppChip ppChipVermelho" id="ppLot_Critica" onclick="ppSelecionarChip('lotacao','Crítica',this)">🔴 Crítica</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Etapa 2 -->
+              <div id="pp_etapa2" style="display:none;">
+                <div style="margin-bottom:10px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Nome do paciente</label>
+                  <input id="pp_pacNome" type="text" placeholder="Ex: João da Silva" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;">
+                </div>
+                <div style="margin-bottom:10px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Leito</label>
+                  <input id="pp_leito" type="text" placeholder="Ex: 03, Obs-A" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;">
+                </div>
+                <div style="margin-bottom:10px;">
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Diagnóstico principal</label>
+                  <input id="pp_diagnostico" type="text" placeholder="Ex: DPOC descompensado, IAM" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;">
+                </div>
+                <div>
+                  <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Prioridade</label>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                    <button class="ppChip ppChipVermelho" id="ppPrio_Critico" onclick="ppSelecionarChip('prioridade','Crítico',this)">🔴 Crítico</button>
+                    <button class="ppChip ppChipAmbar ppChipAtivo" id="ppPrio_Atencao" onclick="ppSelecionarChip('prioridade','Atenção',this)">🟡 Atenção</button>
+                    <button class="ppChip ppChipVerde" id="ppPrio_Estavel" onclick="ppSelecionarChip('prioridade','Estável',this)">🟢 Estável</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Etapa 3 -->
+              <div id="pp_etapa3" style="display:none;">
+                <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:7px;">Pendência para o próximo turno</label>
+                <select id="pp_pendencia" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;margin-bottom:12px;background:#fff;">
+                  <option value="">— Selecione —</option>
+                  <option value="Exame laboratorial pendente">Exame laboratorial pendente</option>
+                  <option value="Imagem pendente (Rx, ECO, TC)">Imagem pendente (Rx, ECO, TC)</option>
+                  <option value="Medicação a administrar">Medicação a administrar</option>
+                  <option value="Vaga de transferência solicitada">Vaga de transferência solicitada</option>
+                  <option value="Aguardando retorno médico">Aguardando retorno médico</option>
+                  <option value="Alta prevista neste turno">Alta prevista neste turno</option>
+                </select>
+                <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Intercorrências (opcional)</label>
+                <textarea id="pp_intercorrencia" rows="2" placeholder="Ex: Queda às 10h20 — notificado." style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical;margin-bottom:10px;"></textarea>
+                <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:5px;">Informações adicionais (opcional)</label>
+                <textarea id="pp_obs" rows="2" placeholder="Ex: O2 3L/min em máscara" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:var(--font);font-size:13px;outline:none;resize:vertical;"></textarea>
+              </div>
+
+              <!-- Etapa 4 -->
+              <div id="pp_etapa4" style="display:none;">
+                <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:13px;margin-bottom:12px;">
+                  <div style="font-size:10px;font-weight:900;color:#059669;letter-spacing:.8px;text-transform:uppercase;margin-bottom:7px;">Resumo gerado automaticamente</div>
+                  <div id="pp_resumoGerado" style="font-size:12px;color:#1e293b;line-height:1.65;"></div>
+                </div>
+                <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px;display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                  <div id="pp_avatarSig" style="width:36px;height:36px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#065f46;flex-shrink:0;">--</div>
+                  <div style="flex:1;">
+                    <div id="pp_nomeSig" style="font-weight:800;font-size:13px;color:#1e293b;"></div>
+                    <div id="pp_metaSig" style="font-size:11px;color:#64748b;"></div>
+                  </div>
+                  <span>🔒</span>
+                </div>
+                <button onclick="ppPublicarCard()" style="width:100%;padding:13px;background:#059669;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:900;cursor:pointer;margin-bottom:7px;">✅ PUBLICAR NO KANBAN</button>
+                <button onclick="ppVoltarEtapa()" style="width:100%;padding:10px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;">← Corrigir</button>
+              </div>
+
+              <!-- Nav etapas 1-3 -->
+              <div id="pp_navBotoes" style="display:flex;gap:8px;margin-top:13px;">
+                <button id="pp_btnVoltar" onclick="ppVoltarEtapa()" style="flex:1;padding:11px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;display:none;">← Voltar</button>
+                <button id="pp_btnAvancar" onclick="ppAvancarEtapa()" style="flex:2;padding:11px;background:#059669;color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer;">Próximo →</button>
+              </div>
+              <div id="pp_erroEtapa" style="display:none;color:#dc2626;font-size:12px;font-weight:700;margin-top:7px;text-align:center;"></div>
+              <button onclick="ppVoltarMenu()" style="width:100%;padding:9px;background:transparent;color:#94a3b8;border:none;font-family:var(--font);font-size:12px;cursor:pointer;margin-top:5px;">Cancelar e voltar ao menu</button>
+            </div>
+
+            <!-- TELA HISTÓRICO -->
+            <div id="pp_telaHistorico" style="display:none;">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                <button class="ppChip ppChipAtivo" onclick="ppFiltrarHist('Todos',this)">Todos</button>
+                <button class="ppChip" onclick="ppFiltrarHist('Manhã',this)">🌅 Manhã</button>
+                <button class="ppChip" onclick="ppFiltrarHist('Tarde',this)">☀️ Tarde</button>
+                <button class="ppChip" onclick="ppFiltrarHist('Noite',this)">🌙 Noite</button>
+              </div>
+              <div id="pp_listaHistorico" style="max-height:360px;overflow-y:auto;"></div>
+              <button onclick="ppVoltarMenu()" style="width:100%;padding:10px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;">← Voltar</button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MODULE VIEWS ============ -->
+
+    <!-- AVISOS -->
+    <div class="module-view" id="view-avisos">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">📢</span><div class="mv-title">Avisos Gerais</div><div style="margin-left:auto"><button class="btn-refresh" onclick="loadAvisos()"><i class="fas fa-rotate-right"></i> Atualizar</button></div></div>
+      <div id="avisos-content"><div class="spinner"><i class="fas fa-circle-notch spin"></i></div></div>
+    </div>
+
+    <!-- FARMÁCIA -->
+    <div class="module-view" id="view-farmacia">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">💊</span><div class="mv-title">Estoque — Farmácia</div><div style="margin-left:auto"><button class="btn-refresh" onclick="loadFarmacia()"><i class="fas fa-rotate-right"></i> Atualizar</button></div></div>
+      <div id="farmacia-content"><div class="spinner"><i class="fas fa-circle-notch spin"></i></div></div>
+    </div>
+
+    <!-- ALMOXARIFADO -->
+    <div class="module-view" id="view-almox">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">📦</span><div class="mv-title">Estoque — Almoxarifado</div><div style="margin-left:auto"><button class="btn-refresh" onclick="loadAlmox()"><i class="fas fa-rotate-right"></i> Atualizar</button></div></div>
+      <div id="almox-content"><div class="spinner"><i class="fas fa-circle-notch spin"></i></div></div>
+    </div>
+
+    <!-- ESCALA -->
+    <div class="module-view" id="view-escala">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">📋</span><div class="mv-title">Escala do Plantão</div><div style="margin-left:auto;display:flex;gap:8px;"><button class="btn-refresh" onclick="escalaSalvarPDF()"><i class="fas fa-file-pdf"></i> Salvar PDF</button><button class="btn-refresh" onclick="loadEscala()"><i class="fas fa-rotate-right"></i> Atualizar</button></div></div>
+      <div id="escala-content"><div class="spinner"><i class="fas fa-circle-notch spin"></i></div></div>
+    </div>
+
+    <!-- DOCUMENTOS -->
+    <div class="module-view" id="view-documentos">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">📄</span><div class="mv-title">Documentos</div><div style="margin-left:auto"><button class="btn-refresh" onclick="loadDocumentos()"><i class="fas fa-rotate-right"></i> Atualizar</button></div></div>
+      <div id="documentos-content"><div class="spinner"><i class="fas fa-circle-notch spin"></i></div></div>
+    </div>
+
+    <!-- TREINAMENTO -->
+    <div class="module-view" id="view-treinamento">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">🎓</span><div class="mv-title">Treinamento</div></div>
+      <a href="https://luisfelipeseroa-glitch.github.io/treinamentouparc/" target="_blank" class="ext-link-card">
+        <span class="el-icon">🎓</span>
+        <div class="el-body"><div class="el-title" style="color:#DB2777">Portal de Treinamentos — UPA Rocinha</div><div class="el-sub">luisfelipeseroa-glitch.github.io · abre em nova aba</div></div>
+        <span class="el-arrow" style="color:#DB2777">→</span>
+      </a>
+    </div>
+
+    <!-- INDICADORES -->
+    <div class="module-view" id="view-indicadores">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">📊</span><div class="mv-title">Relatório Gerencial</div><div style="margin-left:auto"><button class="btn-refresh" onclick="loadIndicadores()"><i class="fas fa-rotate-right"></i> Atualizar</button></div></div>
+      <div id="indicadores-ref" style="font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;"></div>
+      <div id="indicadores-content"><div class="spinner"><i class="fas fa-circle-notch spin"></i></div></div>
+    </div>
+
+    <!-- PROTOCOLOS CLÍNICOS -->
+    <div class="module-view" id="view-protocolos">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">📋</span><div class="mv-title">Protocolos Clínicos</div></div>
+      <div id="proto-menu">
+        <button class="proto-btn" style="border-left:4px solid #EF4444;background:#FEF2F2" onclick="showProto('sepse')"><span class="pb-emoji">🦠</span><div class="pb-text"><div class="pb-name" style="color:#7F1D1D">Sepse</div><div class="pb-desc">Bundle 1ª hora · qSOFA</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #8B5CF6;background:#F5F3FF" onclick="showProto('avc')"><span class="pb-emoji">🧠</span><div class="pb-text"><div class="pb-name" style="color:#4C1D95">AVC / AVE</div><div class="pb-desc">Escala FAST · Janela terapêutica</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #DC2626;background:#FFF1F2" onclick="showProto('iam')"><span class="pb-emoji">❤️</span><div class="pb-text"><div class="pb-name" style="color:#7F1D1D">Dor Torácica / IAM</div><div class="pb-desc">ECG 10 min · MONAB</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #F59E0B;background:#FFFBEB" onclick="showProto('has')"><span class="pb-emoji">🩺</span><div class="pb-text"><div class="pb-name" style="color:#78350F">Crise Hipertensiva</div><div class="pb-desc">Urgência vs. Emergência</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #1E3A8A;background:#EFF6FF" onclick="showProto('pcr')"><span class="pb-emoji">💓</span><div class="pb-text"><div class="pb-name" style="color:#1E3A8A">PCR / RCP</div><div class="pb-desc">Cadeia de sobrevivência · DEA</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #0369A1;background:#F0F9FF" onclick="showProto('conv')"><span class="pb-emoji">⚡</span><div class="pb-text"><div class="pb-name" style="color:#0C4A6E">Convulsão</div><div class="pb-desc">Status epiléptico</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #16A34A;background:#F0FDF4" onclick="showProto('trauma')"><span class="pb-emoji">🩹</span><div class="pb-text"><div class="pb-name" style="color:#14532D">Trauma</div><div class="pb-desc">ABCDE · ATLS</div></div></button>
+      </div>
+      <div id="proto-detail" style="display:none">
+        <button class="btn-back-proto" onclick="document.getElementById('proto-menu').style.display='';document.getElementById('proto-detail').style.display='none'"><i class="fas fa-chevron-left"></i> Voltar</button>
+        <div id="proto-detail-body" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- CALCULADORAS (clínicas) -->
+    <div class="module-view" id="view-calc">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">🧮</span><div class="mv-title">Calculadoras Clínicas</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="calc-menu">
+        <button class="proto-btn" style="border-left:4px solid #7C3AED;background:#F5F3FF" onclick="showCalc('glasgow')"><span class="pb-emoji">🧠</span><div class="pb-text"><div class="pb-name">Escala de Glasgow</div><div class="pb-desc">Nível de consciência</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #D97706;background:#FFFBEB" onclick="showCalc('braden')"><span class="pb-emoji">🛏️</span><div class="pb-text"><div class="pb-name">Escala de Braden</div><div class="pb-desc">Risco de lesão por pressão</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #0369A1;background:#F0F9FF" onclick="showCalc('vent')"><span class="pb-emoji">😷</span><div class="pb-text"><div class="pb-name">Parâmetros Ventilatórios</div><div class="pb-desc">Vc protetora · PEEP · FR</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #EF4444;background:#FEF2F2" onclick="showCalc('qsofa')"><span class="pb-emoji">🦠</span><div class="pb-text"><div class="pb-name">qSOFA — Triagem de Sepse</div><div class="pb-desc">Identificação rápida</div></div></button>
+        <button class="proto-btn" style="border-left:4px solid #155E75;background:#ECFEFF" onclick="showCalc('calcmed')"><span class="pb-emoji">💉</span><div class="pb-text"><div class="pb-name">Cálculo Medicação Salas Internas</div><div class="pb-desc">mL/h · Bomba de infusão</div></div></button>
+      </div>
+      <div id="calc-detail" style="display:none">
+        <button class="btn-back-proto" onclick="document.getElementById('calc-menu').style.display='';document.getElementById('calc-detail').style.display='none'"><i class="fas fa-chevron-left"></i> Voltar</button>
+        <div id="calc-detail-body" style="margin-top:14px"></div>
+      </div>
+    </div>
+
+    <!-- CALCULADORA DE MEDICAÇÃO — link externo -->
+    <div class="module-view" id="view-calcmed">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">💉</span><div class="mv-title">Calculadora de Medicação</div></div>
+      <a href="https://luisfelipeseroa-glitch.github.io/calculadoramedicamentosa/" target="_blank" class="ext-link-card">
+        <span class="el-icon">💉</span>
+        <div class="el-body"><div class="el-title" style="color:#155E75">Calculadora de Medicação</div><div class="el-sub">luisfelipeseroa-glitch.github.io · abre em nova aba</div></div>
+        <span class="el-arrow" style="color:#155E75">→</span>
+      </a>
+      <div style="background:#ECFEFF;border:1px solid #A5F3FC;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:#155E75;margin-top:4px;">
+        💡 Para cálculo rápido de medicamentos de uso nas salas internas, acesse <strong>Calculadoras → Cálculo Medicação Salas Internas</strong>.
+      </div>
+    </div>
+
+    <!-- SAFETY HUDDLE -->
+    <div class="module-view" id="view-safety">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">🛡️</span><div class="mv-title">Safety Huddle</div></div>
+      <a href="https://uparocinha.github.io/safety-huddle/" target="_blank" class="ext-link-card" style="margin-bottom:16px">
+        <span class="el-icon">🛡️</span>
+        <div class="el-body"><div class="el-title">Abrir Safety Huddle</div><div class="el-sub">uparocinha.github.io · abre em nova aba</div></div>
+        <span class="el-arrow">→</span>
+      </a>
+      <div class="huddle-section">
+        <h3><i class="fas fa-clipboard-check" style="color:var(--blue-main)"></i> Checklist Rápido do Turno</h3>
+        <div id="huddle-list"></div>
+        <button style="margin-top:10px;padding:8px 18px;background:var(--gray-200);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer" onclick="resetHuddle()">🔄 Reiniciar Checklist</button>
+      </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO EVENTO ADVERSO -->
+    <div class="module-view" id="view-evento">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">⚠️</span><div class="mv-title">Evento Adverso</div></div>
+      <a href="https://uparocinha.github.io/NOTIFICAEVENTO/" target="_blank" class="ext-link-card">
+        <span class="el-icon">⚠️</span>
+        <div class="el-body"><div class="el-title">Notificar Evento Adverso</div><div class="el-sub">uparocinha.github.io/NOTIFICAEVENTO · abre em nova aba</div></div>
+        <span class="el-arrow">→</span>
+      </a>
+      <div style="background:#FFF1F2;border:1px solid #FECACA;border-radius:var(--radius);padding:14px;font-size:13px;color:#7F1D1D;line-height:1.6">
+        <strong>Por que notificar?</strong><br>
+        A notificação de eventos adversos é essencial para a melhoria contínua da segurança do paciente. Toda ocorrência que causou ou poderia causar dano deve ser registrada, mesmo que não haja lesão aparente.
+        <br><br>📞 Dúvidas: SESMT / Gerência de Risco
+      </div>
+    </div>
+
+    <!-- SALAS INTERNAS -->
+    <div class="module-view" id="view-salas">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">🏥</span><div class="mv-title">Salas Internas</div><div style="margin-left:auto"><button class="btn-refresh" onclick="salasReset()"><i class="fas fa-rotate-right"></i> Zerar</button></div></div>
+
+      <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--gray-200);margin-bottom:18px;">
+        <table class="data-table" id="salas-table" style="min-width:560px">
+          <thead><tr><th>Sala</th><th>Leitos Oficiais</th><th>Ocupados (Oficiais)</th><th>Leitos Extras</th><th>Ocupados (Extras)</th><th>Status</th></tr></thead>
+          <tbody id="salas-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="section-title" style="margin-bottom:10px;">Setores de Apoio</div>
+      <div class="salas-grid" id="apoio-grid">
+        <div class="sala-card"><div class="sala-icon">📷</div><div class="sala-name">Raio-X</div><span class="sala-status" id="apoio-status-raiox"></span></div>
+        <div class="sala-card"><div class="sala-icon">📈</div><div class="sala-name">ECG</div><span class="sala-status" id="apoio-status-ecg"></span></div>
+        <div class="sala-card"><div class="sala-icon">🔬</div><div class="sala-name">Laboratório</div><span class="sala-status" id="apoio-status-lab"></span></div>
+        <div class="sala-card"><div class="sala-icon">🧺</div><div class="sala-name">CME / Expurgo</div><span class="sala-status" id="apoio-status-cme"></span></div>
+      </div>
+      <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px 14px;font-size:12px;color:var(--gray-600);margin-top:12px;line-height:1.7;">
+        <strong>Legenda de status:</strong><br>
+        <span class="status-badge s-ok">Ativa</span> — funcionando normalmente &nbsp;
+        <span class="status-badge s-warn">Em Manutenção</span> — funcionamento parcial/limitado &nbsp;
+        <span class="status-badge s-crit">Inativa</span> — fora de operação
+        <br><br>Clique no status de cada setor para alternar entre Ativa / Em Manutenção / Inativa.
+      </div>
+    </div>
+
+    <!-- PASSAGEM DE PLANTÃO (módulo) -->
+    <div class="module-view" id="view-passagem">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><span style="font-size:20px">🔁</span><div class="mv-title">Passagem de Plantão</div><div style="margin-left:auto"><button class="btn-refresh" onclick="ppAbrirModal()"><i class="fas fa-plus"></i> Registrar / Gerenciar</button></div></div>
+      <div id="pp_planilhaResumo" style="font-size:12px;font-weight:700;color:#475569;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span id="pp_planilhaTurnoTag" style="background:#f0fdf4;color:#166534;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;"></span>
+        <span id="pp_planilhaCounts"></span>
+      </div>
+      <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--gray-200);">
+        <table class="data-table" id="pp-planilha-table" style="min-width:900px">
+          <thead><tr>
+            <th>Nome</th><th>Leito</th><th>Diagnóstico Principal</th><th>Prioridade</th>
+            <th>Pendências p/ próximo turno</th><th>Intercorrência</th><th>Informações Adicionais</th>
+          </tr></thead>
+          <tbody id="pp-planilha-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="pp-planilha-empty" style="display:none">
+        <i class="fas fa-table"></i><p>Nenhum paciente registrado neste plantão.</p>
+      </div>
+      <button id="pp-btn-finalizar" onclick="ppFinalizarGerarPDF()" style="display:none;width:100%;margin-top:14px;padding:12px;background:linear-gradient(135deg,#0369a1,#075985);color:#fff;border:none;border-radius:10px;font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer;">
+        <i class="fas fa-file-pdf"></i> Finalizar Passagem de Plantão e Gerar PDF
+      </button>
+      <div id="pp-pdf-status" style="font-size:12px;color:var(--gray-600);margin-top:8px;text-align:center;"></div>
+    </div>
+
+
+    <!-- PLACEHOLDERS -->
+    <div class="module-view" id="view-rh"><div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><div class="mv-title">Assuntos RH</div></div><a href="https://luisfelipeseroa-glitch.github.io/rhuparc/" target="_blank" class="ext-link-card"><span class="el-icon">👥</span><div class="el-body"><div class="el-title" style="color:#D97706">Portal de RH — UPA Rocinha</div><div class="el-sub">luisfelipeseroa-glitch.github.io · abre em nova aba</div></div><span class="el-arrow" style="color:#D97706">→</span></a></div>
+    <div class="module-view" id="view-dieta">
+      <div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><div class="mv-title">Prescrição de Dieta</div></div>
+      <a href="https://luisfelipeseroa-glitch.github.io/prescricaodietapct/" target="_blank" class="ext-link-card" style="margin:0 0 16px 0"><span class="el-icon">🍽️</span><div class="el-body"><div class="el-title" style="color:#166534">Prescrição de Dieta — UPA Rocinha</div><div class="el-sub">luisfelipeseroa-glitch.github.io · abre em nova aba</div></div><span class="el-arrow" style="color:#166534">→</span></a>
+      <div class="section-title" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span>Histórico — Última Solicitação</span>
+        <button class="btn-refresh" onclick="dietaSalvarPDF()"><i class="fas fa-file-pdf"></i> Salvar PDF</button>
+      </div>
+      <div id="dieta-historico-content"><div class="spinner"><i class="fas fa-circle-notch spin"></i></div></div>
+    </div>
+    <div class="module-view" id="view-sistemas"><div class="mv-header"><button class="mv-back" onclick="goHome()"><i class="fas fa-chevron-left"></i></button><div class="mv-title">Sistemas</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="http://192.168.1.15:8080/vitai" target="_blank" class="ext-link-card" style="background:#EFF6FF;border-color:#BFDBFE"><span class="el-icon">🏥</span><div class="el-body"><div class="el-title" style="color:#1E3A8A">Vitai — Prontuário Eletrônico</div><div class="el-sub">Rede interna · 192.168.1.15</div></div><span class="el-arrow" style="color:#1E3A8A">→</span></a>
+        <a href="https://ser.saude.rj.gov.br/ser/login" target="_blank" class="ext-link-card" style="background:#F0F9FF;border-color:#BAE6FD"><span class="el-icon">📋</span><div class="el-body"><div class="el-title" style="color:#0369A1">SER</div><div class="el-sub">ser.saude.rj.gov.br</div></div><span class="el-arrow" style="color:#0369A1">→</span></a>
+        <a href="https://web2.smsrio.org/login/index.php#/" target="_blank" class="ext-link-card" style="background:#F5F3FF;border-color:#DDD6FE"><span class="el-icon">🛏️</span><div class="el-body"><div class="el-title" style="color:#7C3AED">SMS — Vaga Zero</div><div class="el-sub">web2.smsrio.org</div></div><span class="el-arrow" style="color:#7C3AED">→</span></a>
+        <a href="https://laudos.cientificalab.com.br/laudos/#" target="_blank" class="ext-link-card" style="background:#F0FDF4;border-color:#BBF7D0"><span class="el-icon">🔬</span><div class="el-body"><div class="el-title" style="color:#166534">Laboratório</div><div class="el-sub">laudos.cientificalab.com.br</div></div><span class="el-arrow" style="color:#166534">→</span></a>
+        <a href="https://hci.rio.gov.br/auth/sign-in" target="_blank" class="ext-link-card" style="background:#FEF2F2;border-color:#FECACA"><span class="el-icon">📁</span><div class="el-body"><div class="el-title" style="color:#991B1B">HCI — Histórico Clínico</div><div class="el-sub">hci.rio.gov.br</div></div><span class="el-arrow" style="color:#991B1B">→</span></a>
+        <a href="https://cadastro.saude.gov.br/segcartao" target="_blank" class="ext-link-card" style="background:#FFFBEB;border-color:#FDE68A"><span class="el-icon">💳</span><div class="el-body"><div class="el-title" style="color:#92400E">CADSUS</div><div class="el-sub">cadastro.saude.gov.br</div></div><span class="el-arrow" style="color:#92400E">→</span></a>
+      </div>
+    </div>
+
+    <!-- ======================== CHAT INTERNO ======================== -->
+    <!-- Botão flutuante estilo WhatsApp -->
+    <button id="chat-fab" onclick="chatToggle()" title="Chat Interno" style="display:none">
+      <i class="fas fa-comments"></i>
+      <span class="chat-badge" id="chat-fab-badge">0</span>
+    </button>
+
+    <!-- Janela do chat -->
+    <div id="chat-window">
+      <!-- Header principal -->
+      <div class="chat-header">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+          <i class="fas fa-comments"></i>
+        </div>
+        <div class="chat-header-info">
+          <div class="chat-header-title">Chat Interno — UPA Rocinha</div>
+          <div class="chat-header-sub" id="chat-header-sub">Canal da equipe</div>
+        </div>
+        <button class="chat-close-btn" onclick="chatToggle()"><i class="fas fa-xmark"></i></button>
+      </div>
+
+      <!-- Abas -->
+      <div class="chat-tabs" id="chat-tabs">
+        <button class="chat-tab active" onclick="chatShowTab('geral',this)"><i class="fas fa-users" style="margin-right:4px"></i>Geral</button>
+        <button class="chat-tab" onclick="chatShowTab('pessoas',this)"><i class="fas fa-user-group" style="margin-right:4px"></i>Equipe</button>
+        <button class="chat-tab" onclick="chatShowTab('perfil',this)"><i class="fas fa-circle-user" style="margin-right:4px"></i>Meu Perfil</button>
+      </div>
+
+      <!-- TAB: GERAL -->
+      <div id="chat-tab-geral" class="chat-tab-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="chat-msgs" id="chat-msgs-geral"></div>
+        <div class="chat-input-area">
+          <input type="text" id="chat-input-geral" placeholder="Mensagem para todos..." maxlength="500"
+            onkeydown="if(event.key==='Enter')chatSend('geral')">
+          <button class="chat-send-btn" onclick="chatSend('geral')"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+
+      <!-- TAB: EQUIPE (lista de profissionais) -->
+      <div id="chat-tab-pessoas" class="chat-tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="chat-people" id="chat-people-list">
+          <div class="spinner"><i class="fas fa-circle-notch spin"></i> Carregando...</div>
+        </div>
+      </div>
+
+      <!-- TAB: DM (conversa direta - abre ao clicar numa pessoa) -->
+      <div id="chat-tab-dm" class="chat-tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="chat-dm-header">
+          <button class="chat-dm-back" onclick="chatCloseDm()"><i class="fas fa-chevron-left"></i></button>
+          <div id="chat-dm-avatar" class="chat-person-avatar" style="width:34px;height:34px;font-size:12px;"></div>
+          <div>
+            <div id="chat-dm-name" style="font-size:13px;font-weight:800;color:var(--gray-800);"></div>
+            <div id="chat-dm-role" style="font-size:11px;color:var(--gray-500);"></div>
+          </div>
+        </div>
+        <div class="chat-msgs" id="chat-msgs-dm"></div>
+        <div class="chat-input-area">
+          <input type="text" id="chat-input-dm" placeholder="Mensagem privada..." maxlength="500"
+            onkeydown="if(event.key==='Enter')chatSend('dm')">
+          <button class="chat-send-btn" onclick="chatSend('dm')"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+
+      <!-- TAB: MEU PERFIL -->
+      <div id="chat-tab-perfil" class="chat-tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="chat-profile-panel" style="overflow-y:auto;flex:1;">
+          <div class="chat-profile-photo-wrap">
+            <div class="chat-profile-photo-big" id="chat-profile-photo-big">
+              <span id="chat-profile-initials">??</span>
+            </div>
+            <button class="chat-photo-btn" onclick="document.getElementById('chat-photo-input').click()">
+              <i class="fas fa-camera" style="margin-right:5px"></i>Alterar foto
+            </button>
+            <input type="file" id="chat-photo-input" accept="image/*" style="display:none" onchange="chatUploadPhoto(this)">
+            <p style="font-size:11px;color:var(--gray-400);text-align:center;margin:0;line-height:1.5;">
+              Sua foto aparece no chat e no avatar da tela principal no lugar das iniciais.
+            </p>
+          </div>
+          <div class="chat-profile-info">
+            <div class="chat-profile-row">
+              <span class="chat-profile-label">Nome</span>
+              <span class="chat-profile-val" id="chat-profile-nome">—</span>
+            </div>
+            <div class="chat-profile-row">
+              <span class="chat-profile-label">Matrícula</span>
+              <span class="chat-profile-val" id="chat-profile-mat">—</span>
+            </div>
+            <div class="chat-profile-row">
+              <span class="chat-profile-label">Função</span>
+              <span class="chat-profile-val" id="chat-profile-func">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ======================== /CHAT INTERNO ======================== -->
+
+  </main>
+</div>
+<script>
+/* ============================================================
+   CONFIG
+============================================================ */
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwaLhCzQyRvFs-YkFtKIGoaJnCXmIdfwzKWcvYYoX4Vf9zu1aBHCyy5Rm-AL74kQhVTbw/exec';
+
+/* ============================================================
+   MODULES
+============================================================ */
+const MODULES = [
+  { id:'home',      label:'Home',                   icon:'fa-house',           color:'c-home',    view:'home-view'        },
+  { id:'avisos',    label:'Avisos Gerais',           icon:'fa-bell',            color:'c-avisos',  view:'view-avisos'      },
+  { id:'almox',     label:'Almoxarifado',            icon:'fa-boxes-stacked',   color:'c-almox',   view:'view-almox'       },
+  { id:'calc',      label:'Calculadoras',            icon:'fa-calculator',      color:'c-calc',    view:'view-calc'        },
+  { id:'calcmed',   label:'Calc. Medicação',         icon:'fa-syringe',         color:'c-calcmed', view:'view-calcmed'     },
+  { id:'dieta',     label:'Dieta / Nutrição',        icon:'fa-utensils',        color:'c-dieta',   view:'view-dieta'       },
+  { id:'documentos',label:'Documentos',              icon:'fa-file-lines',      color:'c-docs',    view:'view-documentos'  },
+  { id:'escala',    label:'Escala Plantão',          icon:'fa-calendar-days',   color:'c-escala',  view:'view-escala'      },
+  { id:'evento',    label:'Evento Adverso',          icon:'fa-triangle-exclamation', color:'c-evento', view:'view-evento'  },
+  { id:'farmacia',  label:'Farmácia',                icon:'fa-pills',           color:'c-farmacia',view:'view-farmacia'    },
+  { id:'indicadores',label:'Relatório Gerencial',     icon:'fa-chart-column',    color:'c-sistemas',view:'view-indicadores' },
+  { id:'passagem',  label:'Passagem de Plantão',      icon:'fa-rotate',          color:'c-escala',  view:'view-passagem'    },
+  { id:'protocolos',label:'Protocolos Clínicos',     icon:'fa-clipboard-list',  color:'c-proto',   view:'view-protocolos'  },
+  { id:'rh',        label:'RH',                     icon:'fa-id-badge',        color:'c-rh',      view:'view-rh'          },
+  { id:'safety',    label:'Safety Huddle',           icon:'fa-shield-halved',   color:'c-safety',  view:'view-safety'      },
+  { id:'salas',     label:'Salas Internas',          icon:'fa-hospital',        color:'c-salas',   view:'view-salas'       },
+  { id:'sistemas',  label:'Sistemas',                icon:'fa-desktop',         color:'c-sistemas',view:'view-sistemas'    },
+  { id:'treinamento',label:'Treinamento',            icon:'fa-graduation-cap',  color:'c-treino',  view:'view-treinamento' },
+];
+
+/* ============================================================
+   STATE
+============================================================ */
+let currentUser = null;
+let sidebarOpen = false;
+
+/* ============================================================
+   LOGIN / LOGOUT
+============================================================ */
+/* ============================================================
+   LOGIN — validado contra aba PROFISSIONAIS da planilha
+============================================================ */
+async function doLogin() {
+  const mat  = document.getElementById('inp-matricula').value.trim();
+  const nome = document.getElementById('inp-nome').value.trim();
+  const func = document.getElementById('inp-funcao').value;
+  const err  = document.getElementById('login-error');
+  const btn  = document.querySelector('.btn-login');
+
+  if (!mat || !nome || !func) {
+    err.textContent = 'Preencha todos os campos para continuar.';
+    err.style.display = 'block'; return;
+  }
+
+  err.style.display = 'none';
+  btn.textContent = 'Verificando...';
+  btn.disabled = true;
+
+  try {
+    const rows = await fetchSheet('PROFISSIONAIS');
+    const encontrado = rows.find(r => {
+      const rMat  = (r.MATRICULA || '').toString().trim();
+      const rNome = (r.NOME      || '').toString().trim().toLowerCase();
+      const rFunc = (r.FUNCAO    || '').toString().trim().toLowerCase();
+      return rMat === mat &&
+             rNome === nome.toLowerCase() &&
+             rFunc === func.toLowerCase();
+    });
+
+    if (!encontrado) {
+      err.innerHTML = '❌ Dados não encontrados.<br><small>Verifique matrícula, nome e função exatos conforme cadastro.</small>';
+      err.style.display = 'block';
+      btn.textContent = 'Entrar';
+      btn.disabled = false;
+      return;
+    }
+
+    currentUser = { matricula: mat, nome, funcao: func };
+    sessionStorage.setItem('uparc_user', JSON.stringify(currentUser));
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    initApp();
+
+  } catch(e) {
+    // fallback: se não conseguir acessar a planilha, permite entrada com aviso
+    err.innerHTML = '⚠️ Não foi possível verificar cadastro. Entrando em modo offline.';
+    err.style.display = 'block';
+    currentUser = { matricula: mat, nome, funcao: func };
+    sessionStorage.setItem('uparc_user', JSON.stringify(currentUser));
+    setTimeout(() => {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      initApp();
+    }, 1800);
+  } finally {
+    btn.textContent = 'Entrar';
+    btn.disabled = false;
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('uparc_user');
+  location.reload();
+}
+
+function toggleDropdown() {
+  document.getElementById('user-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#avatar-btn'))
+    document.getElementById('user-dropdown')?.classList.remove('open');
+});
+
+/* ============================================================
+   INIT
+============================================================ */
+function initApp() {
+  const u = currentUser;
+  document.getElementById('top-cargo').textContent   = u.funcao;
+  document.getElementById('top-nome').textContent    = u.nome;
+  document.getElementById('avatar-initials').textContent = initials(u.nome);
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+  document.getElementById('banner-greeting').textContent =
+    `${greet} · ${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}`;
+  document.getElementById('banner-name').textContent = `${greet}, ${u.nome.split(' ')[0]}!`;
+  document.getElementById('banner-sub').textContent  = `${u.funcao} · Matrícula: ${u.matricula}`;
+  buildSidebar();
+  buildModulesGrid();
+  loadAvisosBanner();
+  loadEscalaShift();   // chama ppAtualizarKanban internamente
+  loadAtendimento();
+  buildHuddle();
+  chatInit();          // inicializa chat interno
+}
+
+function initials(nome) {
+  const p = nome.trim().split(' ').filter(Boolean);
+  return p.length >= 2 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : p[0]?.substring(0,2).toUpperCase()||'??';
+}
+
+/* ============================================================
+   SIDEBAR
+============================================================ */
+function buildSidebar() {
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = '';
+  MODULES.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'nav-item' + (m.id==='home' ? ' active' : '');
+    div.dataset.view = m.view;
+    div.onclick = () => navigateTo(m);
+    div.innerHTML = `<i class="fas ${m.icon}"></i><span class="nav-label">${m.label}</span>`;
+    nav.appendChild(div);
+  });
+}
+
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('expanded', sidebarOpen);
+  document.getElementById('main').classList.toggle('sidebar-open', sidebarOpen);
+}
+
+/* ============================================================
+   MODULES GRID (sorted A-Z)
+============================================================ */
+function buildModulesGrid() {
+  const grid = document.getElementById('modules-grid');
+  grid.innerHTML = '';
+  [...MODULES].filter(m => m.id !== 'home').sort((a,b) => a.label.localeCompare(b.label,'pt-BR')).forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'module-btn';
+    btn.onclick = () => navigateTo(m);
+    btn.innerHTML = `<div class="mb-icon ${m.color}"><i class="fas ${m.icon}"></i></div><span class="mb-label">${m.label}</span>`;
+    grid.appendChild(btn);
+  });
+}
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+function navigateTo(m) {
+  document.querySelectorAll('.nav-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.view === m.view));
+  if (m.id === 'home') { goHome(); return; }
+  document.getElementById('home-view').style.display = 'none';
+  document.querySelectorAll('.module-view').forEach(el => el.classList.remove('active'));
+  const target = document.getElementById(m.view);
+  if (target) {
+    target.classList.add('active');
+    const loaders = {
+      'view-avisos':       loadAvisos,
+      'view-farmacia':     loadFarmacia,
+      'view-almox':        loadAlmox,
+      'view-escala':       loadEscala,
+      'view-documentos':   loadDocumentos,
+      'view-indicadores':  loadIndicadores,
+      'view-salas':        loadSalas,
+      'view-passagem':     loadPassagemPlantao,
+      'view-dieta':        loadDietaHistorico,
+    };
+    if (loaders[m.view]) loaders[m.view]();
+  }
+}
+
+function goHome() {
+  document.querySelectorAll('.module-view').forEach(el => el.classList.remove('active'));
+  document.getElementById('home-view').style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.view === 'home-view'));
+}
+
+function selectTab(btn, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display='none');
+  document.getElementById(tabId).style.display = 'block';
+}
+
+/* ============================================================
+   DATA FETCH
+============================================================ */
+async function fetchSheet(aba) {
+  const res = await fetch(`${APP_SCRIPT_URL}?aba=${encodeURIComponent(aba)}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
+}
+
+/* POST genérico para gravação na planilha via Apps Script.
+   Content-Type text/plain evita preflight CORS no Apps Script. */
+async function gsPost(action, payload) {
+  try {
+    const res = await fetch(APP_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action }, payload))
+    });
+    return await res.json();
+  } catch(e) {
+    return { ok:false, error: e.message };
+  }
+}
+
+/* ============================================================
+   GERAÇÃO DE PDF (cabeçalho com logo + título + assinatura)
+============================================================ */
+async function gerarPDFDocumento({ titulo, subtitulo, elementId, nomeArquivo, retornarBase64 }) {
+  const original = document.getElementById(elementId);
+  if (!original) { alert('Conteúdo não encontrado para gerar o PDF.'); return null; }
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:fixed;top:0;left:-9999px;width:760px;background:#ffffff;padding:28px;font-family:Nunito,Arial,sans-serif;color:#1e293b;z-index:-1;';
+  wrapper.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #1A6FC4;padding-bottom:14px;margin-bottom:18px;">
+      <img src="logo_upa_branca.png" crossorigin="anonymous" style="height:64px;background:#1158A0;border-radius:10px;padding:6px;">
+      <div>
+        <div style="font-size:21px;font-weight:900;color:#1A6FC4;letter-spacing:1px;">${titulo}</div>
+        ${subtitulo ? `<div style="font-size:12px;font-weight:700;color:#64748b;margin-top:2px;">${subtitulo}</div>` : ''}
+      </div>
+    </div>
+    <div id="pdf-conteudo-clone" style="font-size:12px;"></div>
+    <div style="margin-top:48px;display:flex;justify-content:space-between;align-items:flex-end;font-size:12px;color:#334155;">
+      <div><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</div>
+      <div style="text-align:center;">
+        <div style="border-top:1px solid #1e293b;width:260px;margin-bottom:5px;"></div>
+        Assinatura do(a) colaborador(a)
+      </div>
+    </div>`;
+  wrapper.querySelector('#pdf-conteudo-clone').appendChild(original.cloneNode(true));
+  document.body.appendChild(wrapper);
+
+  let pdf;
+  try {
+    const canvas = await html2canvas(wrapper, { scale:2, useCORS:true, backgroundColor:'#ffffff' });
+    const { jsPDF } = window.jspdf;
+    pdf = new jsPDF('p','mm','a4');
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth   = pageWidth;
+    const imgHeight  = canvas.height * imgWidth / canvas.width;
+    const imgData    = canvas.toDataURL('image/png');
+
+    let heightLeft = imgHeight, position = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+  } catch(e) {
+    console.error('Erro ao gerar PDF:', e);
+    document.body.removeChild(wrapper);
+    alert('Não foi possível gerar o PDF.');
+    return null;
+  }
+  document.body.removeChild(wrapper);
+
+  if (nomeArquivo) pdf.save(nomeArquivo);
+  if (retornarBase64) {
+    const dataUri = pdf.output('datauristring');
+    return dataUri.split(',')[1]; // remove "data:application/pdf;base64,"
+  }
+  return null;
+}
+
+/* ============================================================
+   AVISOS — BANNER CARROSSEL
+============================================================ */
+let _carouselIdx = 0;
+let _carouselItems = [];
+let _carouselTimer = null;
+
+async function loadAvisosBanner() {
+  try {
+    const rows   = await fetchSheet('AVISOS_GERAIS');
+    _carouselItems = rows.filter(r => (r.STATUS||'').toUpperCase() === 'ATIVO');
+    if (!_carouselItems.length) {
+      _carouselItems = [{ TIPO:'Info', ASSUNTO:'Nenhum aviso ativo no momento', DATA_HORA:'' }];
+    }
+    renderCarousel();
+    if (_carouselItems.length > 1) {
+      clearInterval(_carouselTimer);
+      _carouselTimer = setInterval(() => {
+        _carouselIdx = (_carouselIdx + 1) % _carouselItems.length;
+        scrollCarousel(_carouselIdx);
+      }, 4500);
+    }
+  } catch(e) {
+    _carouselItems = [{ TIPO:'Sistema', ASSUNTO:'Avisos indisponíveis no momento', DATA_HORA:'' }];
+    renderCarousel();
+  }
+}
+
+function renderCarousel() {
+  const track = document.getElementById('banner-cards');
+  const dots  = document.getElementById('carousel-dots');
+  if (!track || !dots) return;
+
+  track.innerHTML = _carouselItems.map((r,i) => `
+    <div class="notice-card ${(r.TIPO||'').toLowerCase()==='especial'?'special':''}">
+      <div class="nc-tag">${r.TIPO||'Aviso'}</div>
+      <div class="nc-title">${r.ASSUNTO||'—'}</div>
+      <div class="nc-date">${r.DATA_HORA||''}</div>
+    </div>`).join('');
+
+  dots.innerHTML = _carouselItems.map((_,i) =>
+    `<button class="carousel-dot ${i===0?'active':''}" onclick="scrollCarousel(${i})"></button>`
+  ).join('');
+}
+
+function scrollCarousel(idx) {
+  _carouselIdx = idx;
+  const track = document.getElementById('banner-cards');
+  const card  = track?.querySelector('.notice-card');
+  if (!card) return;
+  const w = card.offsetWidth + 10;
+  track.style.transform = `translateX(-${idx * w}px)`;
+  document.querySelectorAll('.carousel-dot').forEach((d,i) =>
+    d.classList.toggle('active', i === idx));
+}
+
+/* ============================================================
+   AVISOS — VIEW
+============================================================ */
+async function loadAvisos() {
+  const el = document.getElementById('avisos-content');
+  el.innerHTML = spinner();
+  try {
+    const rows   = await fetchSheet('AVISOS_GERAIS');
+    const ativos = rows.filter(r => (r.STATUS||'').toUpperCase()==='ATIVO');
+    if (!ativos.length) { el.innerHTML = emptyState('fa-bell-slash','Nenhum aviso ativo'); return; }
+    el.innerHTML = `<table class="data-table">
+      <thead><tr><th>Tipo</th><th>Assunto</th><th>Data/Hora</th><th>Status</th></tr></thead>
+      <tbody>${ativos.map(r=>`<tr>
+        <td>${r.TIPO||'—'}</td>
+        <td><strong>${r.ASSUNTO||'—'}</strong></td>
+        <td>${r.DATA_HORA||'—'}</td>
+        <td><span class="status-badge s-ok">Ativo</span></td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e) { el.innerHTML = errState(e); }
+}
+
+/* ============================================================
+   FARMÁCIA / ALMOXARIFADO
+============================================================ */
+async function loadEstoque(aba, elId) {
+  const el = document.getElementById(elId);
+  el.innerHTML = spinner();
+  try {
+    const rows = await fetchSheet(aba);
+    if (!rows.length) { el.innerHTML = emptyState('fa-box-open','Sem dados no estoque'); return; }
+    el.innerHTML = `<table class="data-table">
+      <thead><tr><th>Insumo Crítico</th><th>Qtd</th><th>Duração</th><th>Recomendação</th></tr></thead>
+      <tbody>${rows.map(r=>{
+        const q   = parseFloat(r.QUANTIDADE)||0;
+        const cls = q<=0?'s-crit':q<10?'s-warn':'s-ok';
+        return `<tr>
+          <td><strong>${r.INSUMOS_CRITICOS||'—'}</strong></td>
+          <td><span class="status-badge ${cls}">${r.QUANTIDADE||'0'}</span></td>
+          <td>${r.DURACAO||'—'}</td>
+          <td>${r.RECOMENDACAO||'—'}</td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+  } catch(e) { el.innerHTML = errState(e); }
+}
+function loadFarmacia() { loadEstoque('FARMACIA','farmacia-content'); }
+function loadAlmox()    { loadEstoque('ALMOXARIFADO','almox-content'); }
+
+/* ============================================================
+   SALAS INTERNAS — Planilha de Ocupação
+============================================================ */
+const SALAS_KEY = 'upa_salas_ocupacao';
+const SALAS_DEF = [
+  { id:'vermelha',   nome:'Sala Vermelha',          oficiais:2, extras:2 },
+  { id:'amarelaAd',  nome:'Sala Amarela Adulto',    oficiais:4, extras:2 },
+  { id:'amarelaPed', nome:'Sala Amarela Pediátrica',oficiais:2, extras:1 },
+  { id:'amarelaIso', nome:'Sala Amarela Isolamento',oficiais:1, extras:1 },
+];
+const APOIO_DEF = [
+  { id:'raiox', nome:'Raio-X' },
+  { id:'ecg',   nome:'ECG' },
+  { id:'lab',   nome:'Laboratório' },
+  { id:'cme',   nome:'CME / Expurgo' },
+];
+
+function salasGetState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SALAS_KEY) || '{}');
+    const state = { salas:{}, apoio:{} };
+    SALAS_DEF.forEach(s => state.salas[s.id] = Object.assign({oc:0, ex:0}, saved.salas?.[s.id]));
+    APOIO_DEF.forEach(a => state.apoio[a.id] = saved.apoio?.[a.id] || 'ativo');
+    return state;
+  } catch(e) {
+    const state = { salas:{}, apoio:{} };
+    SALAS_DEF.forEach(s => state.salas[s.id] = {oc:0, ex:0});
+    APOIO_DEF.forEach(a => state.apoio[a.id] = 'ativo');
+    return state;
+  }
+}
+function salasSaveState(state) { localStorage.setItem(SALAS_KEY, JSON.stringify(state)); }
+
+function salasStatusFor(sala, oc, ex) {
+  // Retorna [texto, classe]
+  if (sala.id === 'amarelaIso') {
+    if (ex >= 1) return ['Lotação Extra','s-crit'];
+    if (oc >= 1) return ['Lotado','s-warn'];
+    return ['OK','s-ok'];
+  }
+  if (ex >= 1) return ['Lotação Extra','s-crit'];
+  if (oc >= sala.oficiais) return ['Lotado','s-warn'];
+  if (oc >= 1) return ['OK','s-ok'];
+  return ['Vazio','s-info'];
+}
+
+function loadSalas() {
+  const state = salasGetState();
+  const tbody = document.getElementById('salas-tbody');
+  tbody.innerHTML = SALAS_DEF.map(s => {
+    const cur = state.salas[s.id];
+    const [statusTxt, statusCls] = salasStatusFor(s, cur.oc, cur.ex);
+    return `<tr>
+      <td><strong>${s.nome}</strong></td>
+      <td style="text-align:center">${s.oficiais}</td>
+      <td style="text-align:center">
+        <input type="number" min="0" max="${s.oficiais}" value="${cur.oc}" style="width:54px;padding:4px 6px;border:1.5px solid var(--gray-200);border-radius:6px;text-align:center;font-family:var(--font);"
+          onchange="salasAtualizar('${s.id}','oc',this.value,${s.oficiais})">
+      </td>
+      <td style="text-align:center">${s.extras}</td>
+      <td style="text-align:center">
+        <input type="number" min="0" max="${s.extras}" value="${cur.ex}" style="width:54px;padding:4px 6px;border:1.5px solid var(--gray-200);border-radius:6px;text-align:center;font-family:var(--font);"
+          onchange="salasAtualizar('${s.id}','ex',this.value,${s.extras})">
+      </td>
+      <td style="text-align:center"><span class="status-badge ${statusCls}" id="salas-status-${s.id}">${statusTxt}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Apoio
+  const apoioLabels = { ativo:['Ativa','s-ok'], manutencao:['Em Manutenção','s-warn'], inativo:['Inativa','s-crit'] };
+  APOIO_DEF.forEach(a => {
+    const el = document.getElementById('apoio-status-'+a.id);
+    if (!el) return;
+    const cur = state.apoio[a.id];
+    const [txt, cls] = apoioLabels[cur] || apoioLabels.ativo;
+    el.textContent = txt;
+    el.className = 'sala-status status-badge '+cls;
+    el.style.cursor = 'pointer';
+    el.onclick = () => salasToggleApoio(a.id);
+  });
+}
+
+function salasAtualizar(id, campo, valor, max) {
+  const state = salasGetState();
+  let v = parseInt(valor) || 0;
+  if (v < 0) v = 0;
+  if (v > max) v = max;
+  state.salas[id][campo] = v;
+  salasSaveState(state);
+  loadSalas();
+}
+
+function salasToggleApoio(id) {
+  const state = salasGetState();
+  const ordem = ['ativo','manutencao','inativo'];
+  const idx = ordem.indexOf(state.apoio[id]);
+  state.apoio[id] = ordem[(idx+1) % ordem.length];
+  salasSaveState(state);
+  loadSalas();
+}
+
+function salasReset() {
+  if (!confirm('Zerar todos os leitos e voltar todos os setores de apoio para "Ativa"?')) return;
+  const state = { salas:{}, apoio:{} };
+  SALAS_DEF.forEach(s => state.salas[s.id] = {oc:0, ex:0});
+  APOIO_DEF.forEach(a => state.apoio[a.id] = 'ativo');
+  salasSaveState(state);
+  loadSalas();
+}
+
+/* ============================================================
+   ESCALA — VIEW
+============================================================ */
+const ESCALA_LABELS = {
+  RECEPCAO:'Recepção',ADM:'Administrativo',ALMOX:'Almoxarifado',NIR:'NIR',
+  ASG:'ASG',SESO:'SESMT',MAQ:'Maqueiro',VIG:'Vigilante',TI:'TI',
+  ENF:'Enfermagem',TEC_ENF:'Téc. Enfermagem',FARM:'Farmácia',TEC_FARM:'Téc. Farmácia',
+  MED:'Médico',PED:'Pediatria',RAD:'Radiologia',LABS:'Laboratório',
+  MANUT:'Manutenção',REFRIG:'Refrigeração',AR:'Ar Condicionado'
+};
+
+async function loadEscala() {
+  const el = document.getElementById('escala-content');
+  el.innerHTML = spinner();
+  try {
+    const rows = await fetchSheet('ESCALA');
+    if (!rows.length) { el.innerHTML = emptyState('fa-calendar-days','Escala não disponível'); return; }
+    const cols = Object.keys(ESCALA_LABELS);
+    const grouped = {};
+    cols.forEach(c => grouped[c]=[]);
+    rows.forEach(row => cols.forEach(c => {
+      const v = row[c]; if(v&&v.toString().trim()) grouped[c].push(v.toString().trim());
+    }));
+    el.innerHTML = `<div class="escala-grid">
+      ${cols.map(c=>{
+        const names = grouped[c].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+        if(!names.length) return '';
+        return `<div class="escala-card">
+          <div class="escala-card-header">${ESCALA_LABELS[c]}</div>
+          <div class="escala-card-body">${names.map(n=>`<div class="escala-name">${n}</div>`).join('')}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } catch(e) { el.innerHTML = errState(e); }
+}
+
+/* ============================================================
+   ESCALA — EXPORTAR PDF
+============================================================ */
+async function escalaSalvarPDF() {
+  const turno = ppTurnoAtual();
+  const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  await gerarPDFDocumento({
+    titulo: 'ESCALA DE PLANTÃO',
+    subtitulo: `UPA Rocinha · Turno ${turno} · ${new Date().toLocaleDateString('pt-BR')}`,
+    elementId: 'escala-content',
+    nomeArquivo: `escala_plantao_${dataHoje}.pdf`
+  });
+}
+
+
+/* ============================================================
+   ESCALA — RIGHT PANEL SHIFT (substituído pelo Kanban PP)
+============================================================ */
+async function loadEscalaShift() {
+  // O painel direito agora usa o Kanban de Passagem de Plantão
+  ppAtualizarKanban();
+}
+
+/* ============================================================
+   PASSAGEM DE PLANTÃO — Sistema completo
+============================================================ */
+// Injeta estilos dos chips uma única vez
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .ppChip{padding:6px 13px;border:2px solid #e2e8f0;border-radius:20px;background:#f8fafc;font-size:12px;font-weight:800;color:#475569;cursor:pointer;transition:.15s;font-family:var(--font);}
+    .ppChip:hover{border-color:#059669;color:#059669;}
+    .ppChipAtivo{background:#059669!important;color:#fff!important;border-color:#059669!important;}
+    .ppChipVerde.ppChipAtivo{background:#059669!important;border-color:#059669!important;}
+    .ppChipAmbar.ppChipAtivo{background:#d97706!important;border-color:#d97706!important;color:#fff!important;}
+    .ppChipVermelho.ppChipAtivo{background:#dc2626!important;border-color:#dc2626!important;color:#fff!important;}
+  `;
+  document.head.appendChild(s);
+})();
+
+const PP_SENHA = 'UPA2026';
+const PP_KEY   = 'upa_nir_cards';
+let pp_etapaAtual = 1;
+let pp_turno      = 'Manhã';
+let pp_lotacao    = 'Normal';
+let pp_prioridade = 'Atenção';
+
+function ppAbrirModal() {
+  const overlay = document.getElementById('pp_overlay');
+  overlay.style.display = 'flex';
+  // Mostrar tela de senha se ainda não autenticado nesta sessão
+  const autenticado = sessionStorage.getItem('pp_autenticado');
+  if (autenticado === 'sim') {
+    ppMostrarMenu();
+  }
+}
+
+function ppFecharModal() {
+  document.getElementById('pp_overlay').style.display = 'none';
+}
+
+function ppVerificarSenha() {
+  const v = document.getElementById('pp_senha').value;
+  if (v === PP_SENHA) {
+    sessionStorage.setItem('pp_autenticado','sim');
+    document.getElementById('pp_senha').value = '';
+    document.getElementById('pp_senhaErro').style.display = 'none';
+    ppMostrarMenu();
+  } else {
+    document.getElementById('pp_senhaErro').style.display = 'block';
+    setTimeout(()=>{ document.getElementById('pp_senhaErro').style.display='none'; }, 2500);
+  }
+}
+
+function ppMostrarMenu() {
+  ['pp_telaSenha','pp_telaStepper','pp_telaHistorico'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('pp_telaMenu').style.display = '';
+  ppAtualizarMenuResumo();
+}
+
+function ppAtualizarMenuResumo() {
+  const cards  = ppGetCards();
+  const turno  = ppTurnoAtual();
+  const hoje   = new Date().toLocaleDateString('pt-BR');
+  const ativos = cards.filter(c => c.data === hoje && c.turno === turno && !c.confirmado);
+  const criticos = ativos.filter(c=>c.prioridade==='Crítico').length;
+  const atencao  = ativos.filter(c=>c.prioridade==='Atenção').length;
+  const estaveis = ativos.filter(c=>c.prioridade==='Estável').length;
+  document.getElementById('pp_resumoTurno').innerHTML =
+    `<strong>${turnoEmoji(turno)} ${turno}</strong> &nbsp;|&nbsp; ${ativos.length} paciente(s)
+     &nbsp;&nbsp; 🔴 ${criticos} &nbsp; 🟡 ${atencao} &nbsp; 🟢 ${estaveis}`;
+  const lista = document.getElementById('pp_listaCardsTurno');
+  lista.innerHTML = ativos.length === 0
+    ? '<div style="text-align:center;padding:14px;color:#94a3b8;font-size:12px;">Nenhum card neste turno.</div>'
+    : ativos.map(c => ppCardHTML(c)).join('');
+}
+
+function ppIrParaNovoCard() {
+  document.getElementById('pp_telaMenu').style.display = 'none';
+  document.getElementById('pp_telaStepper').style.display = '';
+  pp_etapaAtual = 1;
+  ppRenderizarEtapa();
+}
+
+function ppIrParaHistorico() {
+  document.getElementById('pp_telaMenu').style.display = 'none';
+  document.getElementById('pp_telaHistorico').style.display = '';
+  ppFiltrarHist('Todos');
+}
+
+function ppVoltarMenu() {
+  ['pp_telaStepper','pp_telaHistorico'].forEach(id =>
+    document.getElementById(id).style.display = 'none');
+  ppMostrarMenu();
+}
+
+function ppSelecionarChip(tipo, valor, btn) {
+  const grupos = {
+    turno:     ['ppTurno_Manha','ppTurno_Tarde','ppTurno_Noite'],
+    lotacao:   ['ppLot_Normal','ppLot_Alerta','ppLot_Critica'],
+    prioridade:['ppPrio_Critico','ppPrio_Atencao','ppPrio_Estavel']
+  };
+  grupos[tipo].forEach(id => document.getElementById(id)?.classList.remove('ppChipAtivo'));
+  btn.classList.add('ppChipAtivo');
+  if (tipo==='turno')      pp_turno = valor;
+  if (tipo==='lotacao')    pp_lotacao = valor;
+  if (tipo==='prioridade') pp_prioridade = valor;
+}
+
+function ppRenderizarEtapa() {
+  const titulos  = ['','Dados do NIR','Dados do Paciente','Status Clínico','Resumo'];
+  const progresso = [0,25,50,75,100];
+  document.getElementById('pp_stepLabel').textContent   = `Etapa ${pp_etapaAtual} de 4`;
+  document.getElementById('pp_stepTitulo').textContent  = titulos[pp_etapaAtual];
+  document.getElementById('pp_progressBar').style.width = progresso[pp_etapaAtual]+'%';
+  [1,2,3,4].forEach(n =>
+    document.getElementById(`pp_etapa${n}`).style.display = n===pp_etapaAtual?'':'none');
+  const nav = document.getElementById('pp_navBotoes');
+  const btnV = document.getElementById('pp_btnVoltar');
+  const btnA = document.getElementById('pp_btnAvancar');
+  if (pp_etapaAtual===4) {
+    nav.style.display = 'none';
+    ppGerarResumo();
+  } else {
+    nav.style.display = 'flex';
+    btnV.style.display = pp_etapaAtual>1?'':'none';
+    btnA.textContent   = pp_etapaAtual===3?'Ver resumo →':'Próximo →';
+  }
+  document.getElementById('pp_erroEtapa').style.display = 'none';
+}
+
+function ppAvancarEtapa() {
+  if (!ppValidarEtapa()) return;
+  pp_etapaAtual++;
+  ppRenderizarEtapa();
+}
+
+function ppVoltarEtapa() {
+  if (pp_etapaAtual>1) { pp_etapaAtual--; ppRenderizarEtapa(); }
+  else ppVoltarMenu();
+}
+
+function ppValidarEtapa() {
+  const erro = document.getElementById('pp_erroEtapa');
+  if (pp_etapaAtual===1 && !document.getElementById('pp_nirNome').value.trim()) {
+    erro.textContent='⚠️ Informe o nome do ADM NIR.'; erro.style.display='block'; return false;
+  }
+  if (pp_etapaAtual===2 && (!document.getElementById('pp_pacNome').value.trim() || !document.getElementById('pp_leito').value.trim())) {
+    erro.textContent='⚠️ Informe nome do paciente e leito.'; erro.style.display='block'; return false;
+  }
+  return true;
+}
+
+function ppGerarResumo() {
+  const nir   = document.getElementById('pp_nirNome').value.trim();
+  const pac   = document.getElementById('pp_pacNome').value.trim();
+  const leito = document.getElementById('pp_leito').value.trim();
+  const diag  = document.getElementById('pp_diagnostico').value.trim() || 'diagnóstico não informado';
+  const inter = document.getElementById('pp_intercorrencia').value.trim();
+  const obs   = document.getElementById('pp_obs').value.trim();
+  const pend  = document.getElementById('pp_pendencia').value.trim();
+  let resumo = `Leito ${leito} — ${pac}. Diagnóstico: ${diag}.`;
+  if (obs)  resumo += ` ${obs}.`;
+  if (pend) resumo += ` Pendências: ${pend}.`;
+  resumo += inter ? ` Intercorrências: ${inter}.` : ' Sem intercorrências.';
+  document.getElementById('pp_resumoGerado').textContent = resumo;
+  const ini = nir.split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2);
+  const agora = new Date();
+  const hora  = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const data  = agora.toLocaleDateString('pt-BR');
+  document.getElementById('pp_avatarSig').textContent = ini;
+  document.getElementById('pp_nomeSig').textContent   = `${nir} — ADM NIR`;
+  document.getElementById('pp_metaSig').textContent   = `${data} às ${hora} · Turno ${pp_turno}`;
+  window._pp_timestamp = { hora, data };
+}
+
+function ppPublicarCard() {
+  const nir    = document.getElementById('pp_nirNome').value.trim();
+  const pac    = document.getElementById('pp_pacNome').value.trim();
+  const leito  = document.getElementById('pp_leito').value.trim();
+  const diag   = document.getElementById('pp_diagnostico').value.trim() || 'não informado';
+  const inter  = document.getElementById('pp_intercorrencia').value.trim();
+  const obs    = document.getElementById('pp_obs').value.trim();
+  const pend   = document.getElementById('pp_pendencia').value.trim();
+  const resumo = document.getElementById('pp_resumoGerado').textContent;
+  const ts     = window._pp_timestamp || {hora:'--:--', data:new Date().toLocaleDateString('pt-BR')};
+  const card = { id:Date.now(), nir, pacNome:pac, leito, diagnostico:diag,
+    turno:pp_turno, lotacao:pp_lotacao, prioridade:pp_prioridade, pendencia:pend,
+    intercorrencias:inter, infoAdicional:obs,
+    resumo, hora:ts.hora, data:ts.data, confirmado:false, linhaPlanilha:null };
+  const lista = ppGetCards();
+  lista.unshift(card);
+  if (lista.length>120) lista.splice(120);
+  ppSaveCards(lista);
+  ['pp_nirNome','pp_pacNome','pp_leito','pp_diagnostico','pp_intercorrencia','pp_obs'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const selPend = document.getElementById('pp_pendencia'); if (selPend) selPend.value='';
+  ppAtualizarKanban();
+  loadPassagemPlantao();
+  ppVoltarMenu();
+
+  // Grava na planilha (aba Passagemplantao) — colunas A a J
+  gsPost('appendPassagem', { aba:'Passagemplantao', dados:[
+    nir, pp_turno, pp_lotacao, pac, leito, diag, pp_prioridade, pend, inter, obs
+  ]}).then(resp => {
+    if (resp && resp.ok) {
+      const lista2 = ppGetCards();
+      const idx = lista2.findIndex(c=>c.id===card.id);
+      if (idx!==-1) { lista2[idx].linhaPlanilha = resp.linha; ppSaveCards(lista2); }
+    } else {
+      console.warn('Falha ao salvar passagem na planilha:', resp && resp.error);
+    }
+  }).catch(err => console.warn('Erro ao salvar passagem na planilha:', err));
+}
+
+function ppConfirmarRecebimento(id) {
+  const lista = ppGetCards();
+  const idx   = lista.findIndex(c=>c.id===id);
+  if (idx!==-1) { lista[idx].confirmado=true; ppSaveCards(lista); ppAtualizarKanban(); ppAtualizarMenuResumo(); loadPassagemPlantao(); }
+}
+
+function ppAtualizarKanban() {
+  const cards  = ppGetCards();
+  const hoje   = new Date().toLocaleDateString('pt-BR');
+  const ativos = cards.filter(c => c.data===hoje && !c.confirmado);
+  const turno  = ppTurnoAtual();
+  const el     = document.getElementById('pp_turnoTag');
+  const cnt    = document.getElementById('pp_kanbanCounts');
+  if (el) el.textContent = turnoEmoji(turno)+' '+turno;
+  const grupos = { critico:[], atencao:[], estavel:[] };
+  ativos.forEach(c => {
+    if      (c.prioridade==='Crítico') grupos.critico.push(c);
+    else if (c.prioridade==='Atenção') grupos.atencao.push(c);
+    else grupos.estavel.push(c);
+  });
+  if (cnt) cnt.textContent = `🔴 ${grupos.critico.length}  🟡 ${grupos.atencao.length}  🟢 ${grupos.estavel.length}`;
+  ['critico','atencao','estavel'].forEach(g => {
+    const el = document.getElementById(`ppk_cnt_${g}`);
+    const col = document.getElementById(`ppk_col_${g}`);
+    if (el) el.textContent = grupos[g].length;
+    if (col) col.innerHTML = grupos[g].length===0
+      ? `<div style="font-size:10px;color:#cbd5e1;text-align:center;padding:8px 0;">—</div>`
+      : grupos[g].map(c=>ppCardKanbanHTML(c)).join('');
+  });
+}
+
+function ppCardKanbanHTML(c) {
+  const cores = {
+    'Crítico':{borda:'#dc2626',leitoBg:'#fee2e2',leitoCor:'#991b1b'},
+    'Atenção':{borda:'#d97706',leitoBg:'#fef9c3',leitoCor:'#854d0e'},
+    'Estável':{borda:'#059669',leitoBg:'#f0fdf4',leitoCor:'#166534'}
+  };
+  const c2 = cores[c.prioridade]||cores['Estável'];
+  return `<div style="background:#fff;border:1px solid #e2e8f0;border-left:3px solid ${c2.borda};border-radius:0 7px 7px 0;padding:7px 8px;margin-bottom:5px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;">
+      <span style="font-weight:900;font-size:11px;color:#1e293b;">${c.pacNome}</span>
+      <span style="font-size:10px;font-weight:800;background:${c2.leitoBg};color:${c2.leitoCor};padding:1px 5px;border-radius:20px;">L${c.leito}</span>
+    </div>
+    <div style="font-size:10px;color:#475569;margin-bottom:4px;line-height:1.3;">${c.diagnostico}</div>
+    <button onclick="ppConfirmarRecebimento(${c.id})" style="width:100%;padding:4px;background:#059669;color:#fff;border:none;border-radius:5px;font-size:10px;font-weight:800;cursor:pointer;font-family:var(--font);">✓ Confirmar</button>
+  </div>`;
+}
+
+function ppCardHTML(c) {
+  const cores={'Crítico':'#dc2626','Atenção':'#d97706','Estável':'#059669'};
+  const cor=cores[c.prioridade]||'#059669';
+  return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid ${cor};border-radius:0 8px 8px 0;padding:9px 11px;margin-bottom:7px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+      <span style="font-weight:900;font-size:12px;">${c.pacNome}</span>
+      <span style="font-size:11px;color:#64748b;">Leito ${c.leito}</span>
+    </div>
+    <div style="font-size:11px;color:#475569;margin-bottom:4px;">${c.resumo}</div>
+    <div style="font-size:10px;color:#94a3b8;">NIR: ${c.nir} · ${c.hora}</div>
+  </div>`;
+}
+
+function ppFiltrarHist(turno, btn) {
+  document.querySelectorAll('#pp_telaHistorico .ppChip').forEach(b=>b.classList.remove('ppChipAtivo'));
+  if (btn) btn.classList.add('ppChipAtivo');
+  const cards   = ppGetCards();
+  const filtrado = turno==='Todos'?cards:cards.filter(c=>c.turno===turno);
+  const lista   = document.getElementById('pp_listaHistorico');
+  if (!filtrado.length) {
+    lista.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">Nenhum registro.</div>';
+    return;
+  }
+  lista.innerHTML = filtrado.map(c=>`
+    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px;margin-bottom:7px;">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:3px;margin-bottom:5px;">
+        <span style="font-weight:900;font-size:12px;">${c.pacNome}</span>
+        <span style="font-size:11px;font-weight:800;background:#f0fdf4;color:#166534;padding:2px 8px;border-radius:20px;">${turnoEmoji(c.turno)} ${c.turno}</span>
+      </div>
+      <div style="font-size:11px;color:#475569;margin-bottom:4px;">${c.resumo}</div>
+      <div style="font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:4px;">
+        NIR: ${c.nir} · Leito ${c.leito} · ${c.data} ${c.hora}
+        ${c.confirmado?'<span style="color:#059669;font-weight:800;margin-left:6px;">✅ Recebido</span>':'<span style="color:#f59e0b;font-weight:800;margin-left:6px;">⏳ Aguardando</span>'}
+      </div>
+    </div>`).join('');
+}
+
+function ppGetCards()       { try{return JSON.parse(localStorage.getItem(PP_KEY)||'[]');}catch(e){return[];} }
+function ppSaveCards(lista) { localStorage.setItem(PP_KEY,JSON.stringify(lista)); }
+function ppTurnoAtual() {
+  const h=new Date().getHours();
+  if(h>=7&&h<13) return 'Manhã';
+  if(h>=13&&h<19) return 'Tarde';
+  return 'Noite';
+}
+function turnoEmoji(t) {
+  if(t==='Manhã') return '🌅';
+  if(t==='Tarde') return '☀️';
+  return '🌙';
+}
+
+/* ============================================================
+   PASSAGEM DE PLANTÃO — VIEW (PLANILHA)
+============================================================ */
+function loadPassagemPlantao() {
+  const cards  = ppGetCards();
+  const hoje   = new Date().toLocaleDateString('pt-BR');
+  const turno  = ppTurnoAtual();
+  const ativos = cards.filter(c => c.data === hoje && !c.confirmado);
+
+  const tagEl = document.getElementById('pp_planilhaTurnoTag');
+  const cntEl = document.getElementById('pp_planilhaCounts');
+  if (tagEl) tagEl.textContent = turnoEmoji(turno)+' '+turno;
+  if (cntEl) {
+    const criticos = ativos.filter(c=>c.prioridade==='Crítico').length;
+    const atencao  = ativos.filter(c=>c.prioridade==='Atenção').length;
+    const estaveis = ativos.filter(c=>c.prioridade==='Estável').length;
+    cntEl.textContent = `${ativos.length} paciente(s) — 🔴 ${criticos}  🟡 ${atencao}  🟢 ${estaveis}`;
+  }
+
+  const tbody = document.getElementById('pp-planilha-tbody');
+  const empty = document.getElementById('pp-planilha-empty');
+  const table = document.getElementById('pp-planilha-table');
+  const btnFinalizar = document.getElementById('pp-btn-finalizar');
+  if (!ativos.length) {
+    if (table) table.style.display = 'none';
+    if (empty) empty.style.display = '';
+    if (btnFinalizar) btnFinalizar.style.display = 'none';
+    return;
+  }
+  if (table) table.style.display = '';
+  if (empty) empty.style.display = 'none';
+  if (btnFinalizar) btnFinalizar.style.display = '';
+
+  const corPrio = {'Crítico':'s-crit','Atenção':'s-warn','Estável':'s-ok'};
+  tbody.innerHTML = ativos.map(c => {
+    const pend  = c.pendencia || '';
+    const inter = c.intercorrencias || '';
+    const info  = c.infoAdicional || '';
+    return `<tr>
+      <td><strong>${c.pacNome}</strong></td>
+      <td>${c.leito}</td>
+      <td>${c.diagnostico}</td>
+      <td><span class="status-badge ${corPrio[c.prioridade]||'s-info'}">${c.prioridade}</span></td>
+      <td style="font-size:11px">${pend || '—'}</td>
+      <td style="font-size:11px">${inter || '—'}</td>
+      <td style="font-size:11px">${info || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   PASSAGEM DE PLANTÃO — FINALIZAR / GERAR PDF E SALVAR LINK (col K)
+============================================================ */
+async function ppFinalizarGerarPDF() {
+  const statusEl = document.getElementById('pp-pdf-status');
+  const cards  = ppGetCards();
+  const hoje   = new Date().toLocaleDateString('pt-BR');
+  const turno  = ppTurnoAtual();
+  const ativos = cards.filter(c => c.data === hoje && !c.confirmado);
+  if (!ativos.length) { alert('Não há pacientes registrados neste plantão.'); return; }
+
+  if (statusEl) statusEl.textContent = '⏳ Gerando PDF...';
+
+  const dataArq = hoje.replace(/\//g,'-');
+  const base64 = await gerarPDFDocumento({
+    titulo: 'PASSAGEM DE PLANTÃO',
+    subtitulo: `UPA Rocinha · Turno ${turno} · ${hoje}`,
+    elementId: 'pp-planilha-table',
+    nomeArquivo: `passagem_plantao_${turno}_${dataArq}.pdf`,
+    retornarBase64: true
+  });
+
+  if (!base64) { if(statusEl) statusEl.textContent = '❌ Erro ao gerar PDF.'; return; }
+
+  if (statusEl) statusEl.textContent = '⏳ Enviando PDF e salvando link na planilha...';
+
+  const upload = await gsPost('uploadPdf', {
+    filename: `passagem_plantao_${turno}_${dataArq}.pdf`,
+    base64
+  });
+
+  if (!upload || !upload.ok) {
+    if (statusEl) statusEl.textContent = '⚠️ PDF baixado, mas não foi possível enviar para a planilha.';
+    return;
+  }
+
+  // Atualiza coluna K (11) para cada linha registrada neste plantão
+  const linhas = ativos.map(c=>c.linhaPlanilha).filter(l=>l);
+  await Promise.all(linhas.map(linha =>
+    gsPost('updateCell', { aba:'Passagemplantao', linha, coluna:11, valor:upload.url })
+  ));
+
+  if (statusEl) statusEl.innerHTML = `✅ PDF salvo! <a href="${upload.url}" target="_blank">Abrir PDF</a>`;
+}
+
+/* ============================================================
+   ATENDIMENTO
+============================================================ */
+async function loadAtendimento() {
+  const el = document.getElementById('tab-atend');
+  try {
+    const rows = await fetchSheet('ATENDIMENTO');
+    if (!rows.length) { el.innerHTML = emptyState('fa-hospital','Sem dados'); return; }
+    const r = rows[0];
+    const get = (...keys) => {
+      for (const k of keys) {
+        if (r[k] !== undefined && r[k] !== '') return r[k];
+      }
+      return undefined;
+    };
+    const fields = [
+      ['Atendimento', get('ATENDIMENTO')],
+      ['Raio-X',      get('RAIO-X','RAIO_X','RAIOX')],
+      ['Status',      get('STATUS')],
+      ['Tempo Médio', get('TEMPO MEDIO','TEMPO_MEDIO','TEMPO_MÉDIO')],
+      ['TME Amarela', get('TEMPO_AMARELA','TME_AMARELA','TME AMARELA')],
+      ['TME Laranja', get('TEMPO_LARANJA','TME_LARANJA','TME LARANJA')],
+      ['TME Verde',   get('TEMPO_VERDE','TME_VERDE','TME VERDE')],
+    ];
+    el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${fields.map(([l,v])=>`<div style="background:var(--gray-50);border-radius:8px;padding:9px">
+        <div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:3px">${l}</div>
+        <div style="font-size:20px;font-weight:800;color:var(--blue-dark)">${v??'—'}</div>
+      </div>`).join('')}
+    </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><i class="fas fa-chart-bar"></i><p>Dados indisponíveis</p></div>`;
+  }
+}
+
+/* ============================================================
+   DOCUMENTOS
+============================================================ */
+async function loadDocumentos() {
+  const el = document.getElementById('documentos-content');
+  el.innerHTML = spinner();
+  try {
+    const rows = await fetchSheet('DOCUMENTOS');
+    if (!rows.length) { el.innerHTML = emptyState('fa-file','Sem documentos'); return; }
+    el.innerHTML = `<table class="data-table">
+      <thead><tr><th>Tipo</th><th>Assunto</th><th>Status</th><th>Link</th></tr></thead>
+      <tbody>${rows.map(r=>{
+        const link = r.LINK || r.Link || r['LINK'] || '';
+        return `<tr>
+        <td>${r.TIPO||'—'}</td>
+        <td><strong>${r.ASSUNTO||'—'}</strong></td>
+        <td><span class="status-badge ${(r.STATUS||'').toLowerCase()==='ativo'?'s-ok':'s-warn'}">${r.STATUS||'—'}</span></td>
+        <td>${link ? `<a href="${link}" target="_blank" class="status-badge s-info" style="text-decoration:none">Abrir <i class="fas fa-arrow-up-right-from-square" style="font-size:9px;margin-left:3px"></i></a>` : '—'}</td>
+      </tr>`;}).join('')}</tbody></table>`;
+  } catch(e) { el.innerHTML = errState(e); }
+}
+
+/* ============================================================
+   DIETA — HISTÓRICO DA ÚLTIMA SOLICITAÇÃO
+============================================================ */
+async function loadDietaHistorico() {
+  const el = document.getElementById('dieta-historico-content');
+  el.innerHTML = spinner();
+  try {
+    const rows = await fetchSheet('DIETA');
+    if (!rows.length) { el.innerHTML = emptyState('fa-utensils','Nenhuma solicitação registrada'); return; }
+    const setor = (currentUser?.funcao || '').toLowerCase();
+    let filtradas = rows.filter(r => (r.SETOR||r.FUNCAO||'').toLowerCase() === setor);
+    if (!filtradas.length) filtradas = rows;
+    const ultima = filtradas[filtradas.length-1];
+    const fields = [
+      ['Data/Hora', ultima.DATA_HORA || ultima.DATA || '—'],
+      ['Setor', ultima.SETOR || ultima.FUNCAO || '—'],
+      ['Paciente', ultima.PACIENTE || ultima.NOME || '—'],
+      ['Leito', ultima.LEITO || '—'],
+      ['Tipo de Dieta', ultima.TIPO_DIETA || ultima.DIETA || '—'],
+      ['Observações', ultima.OBSERVACOES || ultima.OBS || '—'],
+    ];
+    el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${fields.map(([l,v])=>`<div style="background:var(--gray-50);border-radius:8px;padding:9px">
+        <div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase;margin-bottom:3px">${l}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--gray-800)">${v}</div>
+      </div>`).join('')}
+    </div>`;
+  } catch(e) { el.innerHTML = errState(e); }
+}
+
+/* ============================================================
+   DIETA — EXPORTAR PDF
+============================================================ */
+async function dietaSalvarPDF() {
+  const dataHoje = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  await gerarPDFDocumento({
+    titulo: 'PRESCRIÇÃO DE DIETA',
+    subtitulo: `UPA Rocinha · ${new Date().toLocaleDateString('pt-BR')}`,
+    elementId: 'dieta-historico-content',
+    nomeArquivo: `dieta_${dataHoje}.pdf`
+  });
+}
+
+
+async function loadTreinamento() {
+  const el = document.getElementById('treinamento-content');
+  el.innerHTML = spinner();
+  try {
+    const rows = await fetchSheet('TREINAMENTO');
+    if (!rows.length) { el.innerHTML = emptyState('fa-graduation-cap','Sem treinamentos'); return; }
+    el.innerHTML = `<table class="data-table">
+      <thead><tr><th>Matrícula</th><th>Nome</th><th>Função</th><th>Curso</th><th>Horas</th><th>Status</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${r.MATRICULA||'—'}</td>
+        <td><strong>${r.NOME||'—'}</strong></td>
+        <td>${r.FUNCAO||'—'}</td>
+        <td>${r.CURSO||'—'}</td>
+        <td>${r.HORAS||'—'}</td>
+        <td><span class="status-badge ${(r.STATUS||'').toLowerCase()==='concluído'?'s-ok':'s-info'}">${r.STATUS||'—'}</span></td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e) { el.innerHTML = errState(e); }
+}
+
+/* ============================================================
+   INDICADORES
+============================================================ */
+async function loadIndicadores() {
+  const el = document.getElementById('indicadores-content');
+  el.innerHTML = spinner();
+  const refEl = document.getElementById('indicadores-ref');
+  if (refEl) {
+    const hoje = new Date();
+    const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth()-1, 1);
+    const nomeMes = mesAnterior.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    refEl.textContent = `Referência: ${nomeMes.charAt(0).toUpperCase()+nomeMes.slice(1)} (mês anterior)`;
+  }
+  try {
+    const rows = await fetchSheet('INDICADORES');
+    if (!rows.length) { el.innerHTML = emptyState('fa-chart-column','Sem indicadores'); return; }
+    const r = rows[0];
+    const fields = [
+      ['Cadastros','CADASTRO'],['Classificados','CLASSIFICADO'],['Atendidos','ATENDIDO'],
+      ['Raio-X','RAIO_X'],['Leito Amarelo','LEITO_AMARELO'],['Leito Ped.','LEITO_AMARELO_PED'],
+      ['Leito Isol.','LEITO_ISOLAMENTO'],['Leito Verm.','LEITO_VERMELHA'],
+      ['TME Geral','TME GERAL'],['TME Amarelo','TME AMARELO'],
+      ['TME Verde','TME VERDE'],['TME Verm.','TME VERMELHO'],
+      ['Permanência','PERMANENCIA'],['SINAN','SINAN'],
+      ['Satisfação','SATISFACAO'],['AVC','AVC'],
+      ['IAM','IAM'],['Sepse','SEPSE'],
+      ['Óbito <24h','OBITO<24'],['Óbito >24h','OBITO>24'],
+    ];
+    el.innerHTML = `<div class="indicadores-grid">
+      ${fields.map(([lbl,key])=>`<div class="ind-card">
+        <div class="ind-card-label">${lbl}</div>
+        <div class="ind-card-value">${r[key]??'—'}</div>
+      </div>`).join('')}
+    </div>`;
+  } catch(e) { el.innerHTML = errState(e); }
+}
+
+/* ============================================================
+   PROTOCOLOS CLÍNICOS
+============================================================ */
+const PROTOCOLOS = {
+  sepse: {
+    titulo:'🦠 Protocolo de Sepse', cor:'#EF4444',
+    alerta:{bg:'#FEE2E2',cor:'#7F1D1D',txt:'⚠️ Cada hora sem antibiótico aumenta a mortalidade em ~7%'},
+    steps:[
+      {n:'1',t:'Identificar suspeita clínica',d:'Infecção + qSOFA ≥2: FR≥22, Glasgow<15 ou PAS≤100 mmHg'},
+      {n:'2',t:'Coletar hemoculturas (x2)',d:'Colher antes do ATB — não atrasar o antibiótico pela coleta'},
+      {n:'3',t:'Dosar lactato',d:'≥2 mmol/L = hipoperfusão | ≥4 mmol/L = choque séptico'},
+      {n:'4',t:'Antibioticoterapia empírica',d:'Iniciar em até 1h. Escolher conforme foco provável'},
+      {n:'5',t:'Ressuscitação volêmica',d:'SF 0,9% ou Ringer Lactato 30 mL/kg em até 3h se hipotensão ou lactato ≥4'},
+      {n:'6',t:'Vasopressor se PAM < 65 mmHg',d:'Noradrenalina preferencial. Acesso venoso central se possível'},
+    ],
+    meta:{bg:'#FEF3C7',cor:'#78350F',txt:'🎯 Metas: PAM ≥65 | Diurese ≥0,5 mL/kg/h | Lactato clearance ≥10% em 2h'}
+  },
+  avc: {
+    titulo:'🧠 Protocolo AVC / AVE', cor:'#8B5CF6',
+    alerta:{bg:'#EDE9FE',cor:'#4C1D95',txt:'⚠️ "Tempo é cérebro" — 1,9 milhão de neurônios morrem por minuto'},
+    steps:[
+      {n:'1',t:'Aplicar escala FAST',d:'Face (assimetria) | Arm (fraqueza) | Speech (fala) | Time (hora)'},
+      {n:'2',t:'Registrar hora exata do início',d:'Janela trombólise: até 4,5h | Trombectomia: até 24h'},
+      {n:'3',t:'Acesso venoso + exames urgentes',d:'Glicemia, coagulograma, hemograma, eletrólitos'},
+      {n:'4',t:'TC de crânio sem contraste — URGENTE',d:'Diferenciar AVC isquêmico de hemorrágico antes de qualquer conduta'},
+      {n:'5',t:'Monitorização contínua',d:'PA, SatO2, ECG. Manter SatO2 ≥94%. Cabeceira 30° se rebaixamento'},
+      {n:'6',t:'Acionar neurologista / SAMU',d:'Para avaliação de trombólise (Alteplase 0,9 mg/kg, máx 90mg) ou transferência'},
+    ],
+    meta:{bg:'#FEF3C7',cor:'#78350F',txt:'🚫 NÃO reduzir PA agressivamente (exceto se >220x120 no isquêmico ou >180x105 no hemorrágico)'}
+  },
+  iam: {
+    titulo:'❤️ Dor Torácica / IAM', cor:'#DC2626',
+    alerta:{bg:'#FEE2E2',cor:'#7F1D1D',txt:'⚠️ Todo ECG deve ser realizado em até 10 minutos da chegada'},
+    steps:[
+      {n:'1',t:'ECG 12 derivações — imediato',d:'Identificar supradesnivelamento de ST (IAMCSST) ou bloqueio de ramo novo'},
+      {n:'2',t:'Acesso venoso + monitorização',d:'PA, FC, SatO2, oximetria. Oxigênio se SatO2 <94%'},
+      {n:'3',t:'AAS 200mg VO — mastigar',d:'Se não houver contraindicação. Dose de ataque imediata'},
+      {n:'4',t:'Colher troponina, CK-MB, BNP',d:'Hemograma, coagulograma, eletrólitos, função renal'},
+      {n:'5',t:'Morfina / Nitrato se dor intensa',d:'Nitrato: contraindicado se PAS <90 ou uso de sildenafil. Morfina: 2-4mg EV'},
+      {n:'6',t:'Acionar hemodinâmica / transferência',d:'IAMCSST: angioplastia em até 90min (porta-balão). Se indisponível: trombólise'},
+    ],
+    meta:{bg:'#FEF3C7',cor:'#78350F',txt:'🎯 Mnemônico MONAB: Morfina | Oxigênio | Nitrato | AAS | Beta-bloqueador'}
+  },
+  has: {
+    titulo:'🩺 Crise Hipertensiva', cor:'#F59E0B',
+    alerta:{bg:'#FFFBEB',cor:'#78350F',txt:'⚠️ Urgência: PA elevada sem lesão de órgão-alvo | Emergência: PA elevada COM lesão'},
+    steps:[
+      {n:'1',t:'Aferir PA em ambos os membros',d:'Confirmar com 2 medidas. PAS ≥180 e/ou PAD ≥120 mmHg = crise'},
+      {n:'2',t:'Pesquisar lesão de órgão-alvo',d:'ECG, fundoscopia, creatinina, EAS, TC se cefaleia intensa'},
+      {n:'3',t:'Urgência hipertensiva — VO',d:'Captopril 25mg SL ou Amlodipino 5-10mg VO. Reduzir PA em horas'},
+      {n:'4',t:'Emergência hipertensiva — EV',d:'Nitroprussiato, Labetalol ou Hidralazina EV. UTI/monitorização'},
+      {n:'5',t:'Meta de redução',d:'Reduzir PAM em no máx 25% na 1ª hora, depois atingir meta em 2-6h'},
+    ],
+    meta:{bg:'#FEF3C7',cor:'#78350F',txt:'🚫 Não reduzir PA abruptamente — risco de hipoperfusão coronariana e cerebral'}
+  },
+  pcr: {
+    titulo:'💓 PCR / RCP', cor:'#1E3A8A',
+    alerta:{bg:'#EFF6FF',cor:'#1E3A8A',txt:'⚠️ Cada minuto sem RCP reduz em ~10% a chance de sobrevivência'},
+    steps:[
+      {n:'1',t:'Confirmar PCR',d:'Ausência de responsividade, respiração e pulso central (≤10 seg)'},
+      {n:'2',t:'Chamar ajuda + acionar DEA',d:'Ativar código azul. Iniciar RCP imediatamente'},
+      {n:'3',t:'Compressões torácicas',d:'100-120/min, 5-6cm profundidade, relação 30:2'},
+      {n:'4',t:'Via aérea + ventilação',d:'Bolsa-máscara ou IOT. Capnografia se disponível'},
+      {n:'5',t:'DEA / Desfibrilação',d:'Ritmos chocáveis: FV e TV sem pulso. Chocar o mais rápido possível'},
+      {n:'6',t:'Drogas vasopressoras',d:'Adrenalina 1mg EV a cada 3-5min. Amiodarona 300mg se FV refratária'},
+    ],
+    meta:{bg:'#FEF3C7',cor:'#78350F',txt:'🎯 H5T5: Hipovolemia, Hipóxia, H+, Hipo/Hipercalemia, Hipotermia | TEP, Pneumotórax, Tamponamento, Toxinas, Trombose'}
+  },
+  conv: {
+    titulo:'⚡ Convulsão', cor:'#0369A1',
+    alerta:{bg:'#F0F9FF',cor:'#0C4A6E',txt:'⚠️ Status epiléptico = convulsão >5min ou 2 crises sem recuperação da consciência'},
+    steps:[
+      {n:'1',t:'Proteger o paciente',d:'Decúbito lateral, afastar objetos. NÃO imobilizar, NÃO colocar nada na boca'},
+      {n:'2',t:'Medir glicemia capilar',d:'Hipoglicemia é causa tratável imediata. SG 50% 50mL EV se <60mg/dL'},
+      {n:'3',t:'Benzodiazepínico — 1ª linha',d:'Midazolam 10mg IM ou Diazepam 10mg EV (1mg/min). Repetir 1x se necessário'},
+      {n:'4',t:'Antiepiléptico — 2ª linha',d:'Fenitoína 20mg/kg EV (máx 50mg/min) ou Valproato 40mg/kg EV'},
+      {n:'5',t:'Status refratário — 3ª linha',d:'Fenobarbital 20mg/kg EV. Considerar anestesia geral + IOT + UTI'},
+    ],
+    meta:{bg:'#FEF3C7',cor:'#78350F',txt:'🎯 Causas reversíveis: Hipoglicemia, Hiponatremia, Encefalopatia hepática, Drogas/toxinas'}
+  },
+  trauma: {
+    titulo:'🩹 Trauma — Avaliação ABCDE', cor:'#16A34A',
+    alerta:{bg:'#F0FDF4',cor:'#14532D',txt:'⚠️ A triagem primária deve ser concluída em menos de 2 minutos'},
+    steps:[
+      {n:'A',t:'Airway — Via aérea + controle cervical',d:'Desobstruir. Jaw thrust em trauma. Colar cervical se suspeita de lesão'},
+      {n:'B',t:'Breathing — Ventilação',d:'Pneumotórax hipertensivo: decompressão imediata. SatO2 alvo >94%'},
+      {n:'C',t:'Circulation — Circulação + hemorragia',d:'Comprimir sangramentos. 2 acessos calibrosos. Ringer Lactato 1L rápido'},
+      {n:'D',t:'Disability — Nível neurológico',d:'Glasgow, pupilas, glicemia. GCS ≤8 = IOT'},
+      {n:'E',t:'Exposure — Exposição + controle térmico',d:'Despir completamente, inspecionar dorso. Cobrir para evitar hipotermia'},
+    ],
+    meta:{bg:'#FEF3C7',cor:'#78350F',txt:'🎯 Tríade da morte: Hipotermia + Acidose + Coagulopatia — prevenir agressivamente'}
+  }
+};
+
+function showProto(key) {
+  const p = PROTOCOLOS[key];
+  if (!p) return;
+  document.getElementById('proto-menu').style.display = 'none';
+  document.getElementById('proto-detail').style.display = 'block';
+  document.getElementById('proto-detail-body').innerHTML = `
+    <h2 style="text-align:center;color:${p.cor};margin-bottom:12px">${p.titulo}</h2>
+    <div class="fluxo-alerta" style="background:${p.alerta.bg};color:${p.alerta.cor}">${p.alerta.txt}</div>
+    ${p.steps.map((s,i)=>`
+      ${i>0?'<div class="fluxo-arrow">↓</div>':''}
+      <div class="fluxo-step">
+        <div class="fluxo-num" style="background:${p.cor}">${s.n}</div>
+        <div><div class="fluxo-title">${s.t}</div><div class="fluxo-desc">${s.d}</div></div>
+      </div>`).join('')}
+    <div class="fluxo-alerta" style="background:${p.meta.bg};color:${p.meta.cor};margin-top:12px">${p.meta.txt}</div>`;
+}
+
+/* ============================================================
+   CALCULADORAS CLÍNICAS
+============================================================ */
+function showCalc(key) {
+  document.getElementById('calc-menu').style.display = 'none';
+  document.getElementById('calc-detail').style.display = 'block';
+  const body = document.getElementById('calc-detail-body');
+
+  if (key === 'glasgow') {
+    body.innerHTML = `
+      <h3 style="color:#7C3AED;margin-bottom:14px">🧠 Escala de Glasgow</h3>
+      ${glasgowField('g_oc','Abertura Ocular',[[4,'Espontânea'],[3,'À voz'],[2,'À dor'],[1,'Ausente']])}
+      ${glasgowField('g_vr','Resposta Verbal',[[5,'Orientado'],[4,'Confuso'],[3,'Palavras inapropriadas'],[2,'Sons incompreensíveis'],[1,'Ausente']])}
+      ${glasgowField('g_mr','Resposta Motora',[[6,'Obedece comandos'],[5,'Localiza dor'],[4,'Retirada à dor'],[3,'Flexão anormal'],[2,'Extensão anormal'],[1,'Ausente']])}
+      <div class="calc-result" id="glasgow-result" style="display:none">
+        <div class="calc-result-val" id="glasgow-val">—</div>
+        <div class="calc-result-lbl" id="glasgow-lbl">Pontos</div>
+      </div>`;
+    document.querySelectorAll('#calc-detail-body select').forEach(s=>s.addEventListener('change',calcGlasgow));
+
+  } else if (key === 'braden') {
+    body.innerHTML = `
+      <h3 style="color:#D97706;margin-bottom:14px">🛏️ Escala de Braden</h3>
+      ${bradenField('bd1','Percepção Sensorial',[[4,'Nenhuma limitação'],[3,'Levemente limitada'],[2,'Muito limitada'],[1,'Completamente limitada']])}
+      ${bradenField('bd2','Umidade',[[4,'Raramente úmida'],[3,'Ocasionalmente úmida'],[2,'Muito úmida'],[1,'Constantemente úmida']])}
+      ${bradenField('bd3','Atividade',[[4,'Anda frequentemente'],[3,'Anda ocasionalmente'],[2,'Restrito à cadeira'],[1,'Acamado']])}
+      ${bradenField('bd4','Mobilidade',[[4,'Sem limitações'],[3,'Levemente limitada'],[2,'Muito limitada'],[1,'Completamente imóvel']])}
+      ${bradenField('bd5','Nutrição',[[4,'Excelente'],[3,'Adequada'],[2,'Inadequada'],[1,'Muito pobre']])}
+      ${bradenField('bd6','Fricção e Cisalhamento',[[3,'Nenhum problema'],[2,'Problema em potencial'],[1,'Problema']])}
+      <div class="calc-result" id="braden-result" style="display:none">
+        <div class="calc-result-val" id="braden-val">—</div>
+        <div class="calc-result-lbl" id="braden-lbl">Pontos</div>
+      </div>`;
+    document.querySelectorAll('#calc-detail-body select').forEach(s=>s.addEventListener('change',calcBraden));
+
+  } else if (key === 'vent') {
+    body.innerHTML = `
+      <h2 style="text-align:center; color:#0369a1; margin-top:0; margin-bottom:4px;">😷 Suporte Ventilatório Pediátrico</h2>
+      <p style="font-size:0.75rem; color:#64748b; text-align:center; margin-top:-4px; margin-bottom:14px;">
+        Parâmetros iniciais sugeridos — ajuste conforme resposta clínica
+      </p>
+
+      <div class="vent-table-wrap">
+        <table class="vent-table">
+          <thead>
+            <tr>
+              <th>Faixa Etária</th>
+              <th>Peso (kg)</th>
+              <th>Vc (mL)</th>
+              <th>FR (rpm)</th>
+              <th>PEEP (cmH₂O)</th>
+              <th>PIP (cmH₂O)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="faixa-nome">RN Prematuro</div><div class="faixa-idade">&lt; 37 semanas</div></td>
+              <td>0,5 – 1,5</td><td>3 – 12</td><td>40 – 60</td><td>4 – 5</td><td>14 – 20</td>
+            </tr>
+            <tr>
+              <td><div class="faixa-nome">RN a Termo</div><div class="faixa-idade">0 – 28 dias</div></td>
+              <td>2,5 – 4</td><td>15 – 32</td><td>40 – 60</td><td>4 – 5</td><td>16 – 22</td>
+            </tr>
+            <tr>
+              <td><div class="faixa-nome">Lactente</div><div class="faixa-idade">1 – 12 meses</div></td>
+              <td>4 – 10</td><td>24 – 80</td><td>30 – 50</td><td>4 – 6</td><td>16 – 24</td>
+            </tr>
+            <tr>
+              <td><div class="faixa-nome">Pré-escolar</div><div class="faixa-idade">1 – 5 anos</div></td>
+              <td>10 – 18</td><td>60 – 144</td><td>20 – 30</td><td>5 – 6</td><td>18 – 25</td>
+            </tr>
+            <tr>
+              <td><div class="faixa-nome">Escolar</div><div class="faixa-idade">6 – 12 anos</div></td>
+              <td>18 – 40</td><td>108 – 320</td><td>16 – 24</td><td>5 – 8</td><td>18 – 28</td>
+            </tr>
+            <tr>
+              <td><div class="faixa-nome">Adolescente</div><div class="faixa-idade">13 – 17 anos</div></td>
+              <td>40 – 70</td><td>240 – 560</td><td>12 – 20</td><td>5 – 8</td><td>20 – 30</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="vent-aviso">
+        <strong>⚠️ Lembretes importantes:</strong><br>
+        • Vc ideal: <strong>6 – 8 mL/kg</strong> de peso predito<br>
+        • Limite PIP: <strong>&lt; 30 cmH₂O</strong> sempre que possível<br>
+        • Ajustar FiO₂ para SpO₂ <strong>94 – 98%</strong><br>
+        • Reavalie gasometria após <strong>30 min</strong> de ventilação<br>
+        • Em caso de dúvida, acione o médico responsável imediatamente
+      </div>
+
+      <h3 style="color:#0369A1;margin:18px 0 14px">🫁 Calculadora por Peso</h3>
+      <div class="calc-form">
+        <label>Peso (kg)</label>
+        <input type="number" id="vc-peso" placeholder="Ex: 70" min="1" max="200" oninput="calcVent()">
+        <label>Modo</label>
+        <select id="vc-modo" onchange="calcVent()">
+          <option value="adulto">Adulto (≥18 anos)</option>
+          <option value="ped">Pediátrico (&lt;18 anos)</option>
+        </select>
+        <label>FiO₂</label>
+        <select id="vc-fio2" onchange="calcVent()">
+          <option value="40">40%</option><option value="50">50%</option>
+          <option value="60" selected>60%</option><option value="80">80%</option><option value="100">100%</option>
+        </select>
+      </div>
+      <div class="calc-result" id="vent-result" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:6px" id="vent-result-rows"></div>
+      </div>`;
+
+  } else if (key === 'calcmed') {
+    body.innerHTML = `
+      <h3 style="color:#155E75;margin-bottom:14px">💉 Cálculo Medicação Salas Internas</h3>
+      <div class="calc-form">
+        <label>Medicamento</label>
+        <select id="med-select" onchange="calcMed()">
+          <option value="">Selecione o medicamento...</option>
+          <option value="norad" data-conc="4" data-unit="mcg/kg/min" data-min="0.01" data-max="3">Noradrenalina (4mg/50mL)</option>
+          <option value="dopa" data-conc="10" data-unit="mcg/kg/min" data-min="2" data-max="20">Dopamina (200mg/20mL)</option>
+          <option value="dobuta" data-conc="12.5" data-unit="mcg/kg/min" data-min="2" data-max="20">Dobutamina (250mg/20mL)</option>
+          <option value="midaz" data-conc="5" data-unit="mg/h" data-min="0.02" data-max="0.1">Midazolam (50mg/10mL)</option>
+          <option value="morfi" data-conc="2" data-unit="mg/h" data-min="0.01" data-max="0.1">Morfina (10mg/5mL)</option>
+          <option value="kcl" data-conc="19.1" data-unit="mEq/h" data-min="10" data-max="20">KCl 10% (10mEq/mL)</option>
+          <option value="insulina" data-conc="1" data-unit="UI/h" data-min="0.1" data-max="10">Insulina Regular (100UI/100mL)</option>
+        </select>
+        <label>Peso do paciente (kg)</label>
+        <input type="number" id="med-peso" placeholder="Ex: 70" min="1" max="300" oninput="calcMed()">
+        <label>Dose desejada</label>
+        <input type="number" id="med-dose" placeholder="Dose" step="0.01" oninput="calcMed()">
+        <div id="med-dose-hint" style="font-size:11px;color:var(--gray-500);margin-top:4px;"></div>
+        <div class="calc-result" id="med-result" style="display:none">
+          <div class="calc-result-val" id="med-result-val">—</div>
+          <div class="calc-result-lbl" id="med-result-lbl">mL/h na bomba</div>
+          <div style="margin-top:8px;font-size:12px;color:var(--gray-500)" id="med-result-obs"></div>
+        </div>
+      </div>
+      <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--radius);padding:12px 14px;font-size:12px;color:#92400E;">
+        ⚠️ <strong>Atenção:</strong> Ferramenta auxiliar. Toda prescrição deve ser validada pelo médico responsável.
+      </div>`;
+
+  } else if (key === 'qsofa') {
+    body.innerHTML = `
+      <h3 style="color:#EF4444;margin-bottom:14px">🦠 qSOFA — Triagem de Sepse</h3>
+      <div style="display:flex;flex-direction:column;gap:8px" id="qsofa-items">
+        ${['FR ≥ 22 irpm','Glasgow < 15','PAS ≤ 100 mmHg'].map((lbl,i)=>`
+          <div class="huddle-item" id="qs${i}" onclick="toggleQsofa(${i})">
+            <div class="huddle-check" id="qsc${i}"></div>
+            <span>${lbl}</span>
+          </div>`).join('')}
+      </div>
+      <div class="calc-result" id="qsofa-result" style="margin-top:14px">
+        <div class="calc-result-val" id="qsofa-val">0</div>
+        <div class="calc-result-lbl" id="qsofa-lbl">pontos — baixo risco</div>
+      </div>`;
+  }
+}
+
+function glasgowField(id,label,opts) {
+  return `<div style="margin-bottom:12px">
+    <label style="display:block;font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;margin-bottom:5px">${label}</label>
+    <select id="${id}" style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;outline:none">
+      <option value="">— selecione —</option>
+      ${opts.map(([v,t])=>`<option value="${v}">${v} – ${t}</option>`).join('')}
+    </select>
+  </div>`;
+}
+function bradenField(id,label,opts) { return glasgowField(id,label,opts); }
+
+function calcGlasgow() {
+  const vals = ['g_oc','g_vr','g_mr'].map(id=>parseInt(document.getElementById(id)?.value)||0);
+  if(vals.some(v=>v===0)) return;
+  const total = vals.reduce((a,b)=>a+b,0);
+  const cls = total>=13?'Leve (13-15)':total>=9?'Moderado (9-12)':'Grave (≤8)';
+  const clr = total>=13?'#065F46':total>=9?'#92400E':'#991B1B';
+  const r = document.getElementById('glasgow-result');
+  r.style.display='block'; r.style.borderColor=clr;
+  document.getElementById('glasgow-val').style.color=clr;
+  document.getElementById('glasgow-val').textContent=total;
+  document.getElementById('glasgow-lbl').textContent=cls;
+}
+
+function calcBraden() {
+  const ids=['bd1','bd2','bd3','bd4','bd5','bd6'];
+  const vals=ids.map(id=>parseInt(document.getElementById(id)?.value)||0);
+  if(vals.some(v=>v===0)) return;
+  const total=vals.reduce((a,b)=>a+b,0);
+  const [cls,clr]=total<=9?['Risco muito alto','#991B1B']:total<=12?['Risco alto','#B45309']:total<=14?['Risco moderado','#92400E']:total<=18?['Risco leve','#166534']:['Sem risco','#065F46'];
+  const r=document.getElementById('braden-result');
+  r.style.display='block'; r.style.borderColor=clr;
+  document.getElementById('braden-val').style.color=clr;
+  document.getElementById('braden-val').textContent=total;
+  document.getElementById('braden-lbl').textContent=cls;
+}
+
+function calcVent() {
+  const peso=parseFloat(document.getElementById('vc-peso')?.value)||0;
+  const modo=document.getElementById('vc-modo')?.value;
+  const fio2=document.getElementById('vc-fio2')?.value;
+  if(!peso) return;
+  const vc6=Math.round(peso*6), vc8=Math.round(peso*8);
+  const fr=modo==='ped'?(peso<10?30:peso<20?24:20):14;
+  const peep=modo==='ped'?4:5;
+  const pip=peep+(modo==='ped'?15:20);
+  const rows=[['Vc protetora (6 mL/kg)',vc6+' mL'],['Vc máximo (8 mL/kg)',vc8+' mL'],
+    ['Frequência Respiratória',fr+' irpm'],['PEEP',peep+' cmH₂O'],['PIP máx',pip+' cmH₂O'],['FiO₂',fio2+'%']];
+  const r=document.getElementById('vent-result');
+  r.style.display='block';
+  document.getElementById('vent-result-rows').innerHTML=rows.map(([l,v])=>`
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #BAE6FD;font-size:13px">
+      <span style="color:#0369A1;font-weight:600">${l}</span>
+      <span style="font-weight:800;color:var(--blue-dark)">${v}</span>
+    </div>`).join('');
+}
+
+let qsofaState=[false,false,false];
+function toggleQsofa(i) {
+  qsofaState[i]=!qsofaState[i];
+  const item=document.getElementById('qs'+i);
+  const chk=document.getElementById('qsc'+i);
+  item.classList.toggle('done',qsofaState[i]);
+  chk.textContent=qsofaState[i]?'✓':'';
+  const total=qsofaState.filter(Boolean).length;
+  document.getElementById('qsofa-val').textContent=total;
+  const [lbl,clr]=total>=2?['pontos — ALTO RISCO de sepse','#991B1B']:total===1?['ponto — atenção','#92400E']:['pontos — baixo risco','#065F46'];
+  document.getElementById('qsofa-lbl').textContent=lbl;
+  document.getElementById('qsofa-result').style.borderColor=clr;
+  document.getElementById('qsofa-val').style.color=clr;
+}
+
+/* ============================================================
+   CALCULADORA DE MEDICAÇÃO
+============================================================ */
+function calcMed() {
+  const sel   = document.getElementById('med-select');
+  const peso  = parseFloat(document.getElementById('med-peso').value)||0;
+  const dose  = parseFloat(document.getElementById('med-dose').value)||0;
+  const res   = document.getElementById('med-result');
+  const hint  = document.getElementById('med-dose-hint');
+  const opt   = sel.options[sel.selectedIndex];
+
+  if (!opt.value) { res.style.display='none'; hint.textContent=''; return; }
+
+  const unit  = opt.dataset.unit;
+  const conc  = parseFloat(opt.dataset.conc);
+  const dmin  = parseFloat(opt.dataset.min);
+  const dmax  = parseFloat(opt.dataset.max);
+
+  hint.textContent = `Faixa: ${dmin} – ${dmax} ${unit}${unit.includes('kg')?'':' (sem ajuste por peso)'}`;
+
+  if (!dose) { res.style.display='none'; return; }
+
+  let mlh;
+  if (unit.includes('kg')) {
+    if (!peso) { res.style.display='none'; return; }
+    mlh = (dose * peso * 60) / (conc * 1000);
+  } else {
+    mlh = dose / conc;
+  }
+
+  if (mlh <= 0) { res.style.display='none'; return; }
+
+  const warn = dose < dmin ? '⚠️ Abaixo da dose mínima' : dose > dmax ? '⚠️ Acima da dose máxima' : '✅ Dentro da faixa terapêutica';
+  res.style.display = 'block';
+  document.getElementById('med-result-val').textContent = mlh.toFixed(2) + ' mL/h';
+  document.getElementById('med-result-lbl').textContent = `${dose} ${unit} · ${peso?peso+'kg · ':''}Concentração: ${conc} mg/mL`;
+  document.getElementById('med-result-obs').textContent = warn;
+}
+
+/* ============================================================
+   SAFETY HUDDLE — Checklist
+============================================================ */
+const HUDDLE_ITEMS = [
+  'Equipe completa e identificada',
+  'Leitos disponíveis verificados',
+  'Medicamentos críticos checados',
+  'Equipamentos em funcionamento',
+  'Pacientes críticos sinalizados',
+  'Exames pendentes revisados',
+  'Comunicação intercorrências do turno anterior',
+  'EPIs disponíveis na unidade',
+  'Saídas de emergência desobstruídas',
+  'Plantão de médico responsável definido',
+];
+
+function buildHuddle() {
+  const list = document.getElementById('huddle-list');
+  if (!list) return;
+  const saved = JSON.parse(localStorage.getItem('uparc_huddle')||'[]');
+  list.innerHTML = HUDDLE_ITEMS.map((item,i)=>`
+    <div class="huddle-item ${saved[i]?'done':''}" id="huddle-${i}" onclick="toggleHuddle(${i})">
+      <div class="huddle-check">${saved[i]?'✓':''}</div>
+      <span>${item}</span>
+    </div>`).join('');
+}
+
+function toggleHuddle(i) {
+  const saved = JSON.parse(localStorage.getItem('uparc_huddle')||'[]');
+  saved[i] = !saved[i];
+  localStorage.setItem('uparc_huddle', JSON.stringify(saved));
+  buildHuddle();
+}
+
+function resetHuddle() {
+  localStorage.removeItem('uparc_huddle');
+  buildHuddle();
+}
+
+/* ============================================================
+   HELPERS
+============================================================ */
+function spinner() { return `<div class="spinner"><i class="fas fa-circle-notch spin"></i> Carregando...</div>`; }
+function emptyState(icon, msg) { return `<div class="empty-state"><i class="fas ${icon}"></i><p>${msg}</p></div>`; }
+function errState(e) {
+  return `<div class="empty-state" style="color:#B91C1C">
+    <i class="fas fa-triangle-exclamation"></i>
+    <p>Erro: ${e.message}</p>
+    <p style="font-size:11px;margin-top:5px">Verifique o App Script e as permissões da planilha.</p>
+  </div>`;
+}
+
+
+/* ============================================================
+   CHAT INTERNO — Sistema completo (localStorage + polling)
+============================================================ */
+const CHAT_KEY_GERAL  = 'uparc_chat_geral';
+const CHAT_KEY_DM     = 'uparc_chat_dm_';
+const CHAT_KEY_PHOTOS = 'uparc_chat_photos';
+const CHAT_POLL_MS    = 3000; // intervalo de refresh (3s)
+const CHAT_MAX_MSGS   = 200;
+
+let chatOpen        = false;
+let chatCurrentTab  = 'geral';
+let chatDmTarget    = null;   // {matricula, nome, funcao}
+let chatPollTimer   = null;
+let chatLastRead    = {};     // {geral: timestamp, dm_MAT: timestamp}
+let chatProfessionals = [];   // lista da aba PROFISSIONAIS
+
+/* ---------- Inicialização ---------- */
+function chatInit() {
+  document.getElementById('chat-fab').style.display = 'flex';
+  // preenche perfil
+  const u = currentUser;
+  document.getElementById('chat-profile-nome').textContent  = u.nome;
+  document.getElementById('chat-profile-mat').textContent   = u.matricula;
+  document.getElementById('chat-profile-func').textContent  = u.funcao;
+  document.getElementById('chat-profile-initials').textContent = initials(u.nome);
+  // atualiza avatar da topbar com foto se houver
+  chatApplyPhoto(u.matricula, document.getElementById('avatar-btn'), u.nome);
+  // carrega foto no perfil
+  chatApplyPhoto(u.matricula, document.getElementById('chat-profile-photo-big'), u.nome);
+  // carrega lastRead
+  try { chatLastRead = JSON.parse(localStorage.getItem('uparc_chat_lastread')||'{}'); } catch(e){ chatLastRead={}; }
+  // inicia polling
+  chatStartPoll();
+  chatRenderGeral();
+  chatLoadProfessionals();
+}
+
+/* ---------- Toggle janela ---------- */
+function chatToggle() {
+  chatOpen = !chatOpen;
+  const win = document.getElementById('chat-window');
+  win.classList.toggle('open', chatOpen);
+  if (chatOpen) {
+    chatMarkRead(chatCurrentTab === 'dm' ? ('dm_'+(chatDmTarget?.matricula||'')) : chatCurrentTab);
+    chatRenderGeral();
+    chatUpdateBadge();
+    setTimeout(() => chatScrollBottom(chatCurrentTab === 'dm' ? 'chat-msgs-dm' : 'chat-msgs-geral'), 50);
+  }
+}
+
+/* ---------- Abas ---------- */
+function chatShowTab(tab, btn) {
+  // esconde todas as abas de conteúdo
+  document.querySelectorAll('.chat-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  // esconde a aba DM (não é uma aba no menu, mas um painel)
+  document.getElementById('chat-tab-dm').style.display = 'none';
+
+  chatCurrentTab = tab;
+  const el = document.getElementById('chat-tab-' + tab);
+  if (el) el.style.display = 'flex';
+
+  if (tab === 'geral') {
+    chatMarkRead('geral');
+    chatRenderGeral();
+    setTimeout(() => chatScrollBottom('chat-msgs-geral'), 50);
+  } else if (tab === 'pessoas') {
+    chatLoadProfessionals();
+  } else if (tab === 'perfil') {
+    // já preenchido no init
+  }
+  chatUpdateBadge();
+}
+
+/* ---------- Abrir DM ---------- */
+function chatOpenDm(person) {
+  chatDmTarget = person;
+  document.getElementById('chat-dm-name').textContent = person.nome;
+  document.getElementById('chat-dm-role').textContent = person.funcao;
+  const avEl = document.getElementById('chat-dm-avatar');
+  chatApplyPhoto(person.matricula, avEl, person.nome);
+
+  // esconde outras abas de conteúdo
+  document.querySelectorAll('.chat-tab-content').forEach(el => el.style.display = 'none');
+  document.getElementById('chat-tab-dm').style.display = 'flex';
+  chatCurrentTab = 'dm';
+
+  const dmKey = 'dm_' + person.matricula;
+  chatMarkRead(dmKey);
+  chatRenderDm();
+  setTimeout(() => chatScrollBottom('chat-msgs-dm'), 50);
+  chatUpdateBadge();
+}
+
+function chatCloseDm() {
+  chatDmTarget = null;
+  document.getElementById('chat-tab-dm').style.display = 'none';
+  chatShowTab('pessoas', document.querySelector('.chat-tab:nth-child(2)'));
+}
+
+/* ---------- Enviar mensagem ---------- */
+function chatSend(channel) {
+  const inputId = channel === 'dm' ? 'chat-input-dm' : 'chat-input-geral';
+  const inputEl = document.getElementById(inputId);
+  const text = inputEl.value.trim();
+  if (!text) return;
+  inputEl.value = '';
+
+  const msg = {
+    id: Date.now(),
+    from: currentUser.matricula,
+    nome: currentUser.nome,
+    funcao: currentUser.funcao,
+    text,
+    ts: Date.now()
+  };
+
+  if (channel === 'geral') {
+    const msgs = chatGetMsgs(CHAT_KEY_GERAL);
+    msgs.push(msg);
+    if (msgs.length > CHAT_MAX_MSGS) msgs.splice(0, msgs.length - CHAT_MAX_MSGS);
+    chatSaveMsgs(CHAT_KEY_GERAL, msgs);
+    chatMarkRead('geral');
+    chatRenderGeral();
+    setTimeout(() => chatScrollBottom('chat-msgs-geral'), 30);
+  } else if (channel === 'dm' && chatDmTarget) {
+    // chave simétrica: sempre ordem alfabética de matrícula
+    const key = chatDmKey(currentUser.matricula, chatDmTarget.matricula);
+    const msgs = chatGetMsgs(key);
+    msgs.push(msg);
+    if (msgs.length > CHAT_MAX_MSGS) msgs.splice(0, msgs.length - CHAT_MAX_MSGS);
+    chatSaveMsgs(key, msgs);
+    const dmKey = 'dm_' + chatDmTarget.matricula;
+    chatMarkRead(dmKey);
+    chatRenderDm();
+    setTimeout(() => chatScrollBottom('chat-msgs-dm'), 30);
+  }
+}
+
+/* ---------- Renderizar mensagens ---------- */
+function chatRenderGeral() {
+  const el = document.getElementById('chat-msgs-geral');
+  if (!el) return;
+  const msgs = chatGetMsgs(CHAT_KEY_GERAL);
+  if (!msgs.length) {
+    el.innerHTML = '<div class="chat-system-msg" style="margin-top:20px">👋 Canal geral — mande uma mensagem para a equipe!</div>';
+    return;
+  }
+  el.innerHTML = chatBuildMsgsHtml(msgs);
+}
+
+function chatRenderDm() {
+  const el = document.getElementById('chat-msgs-dm');
+  if (!el || !chatDmTarget) return;
+  const key = chatDmKey(currentUser.matricula, chatDmTarget.matricula);
+  const msgs = chatGetMsgs(key);
+  if (!msgs.length) {
+    el.innerHTML = `<div class="chat-system-msg" style="margin-top:20px">💬 Início da conversa com ${chatDmTarget.nome}</div>`;
+    return;
+  }
+  el.innerHTML = chatBuildMsgsHtml(msgs);
+}
+
+function chatBuildMsgsHtml(msgs) {
+  let html = '';
+  let lastDate = '';
+  const photos = chatGetPhotos();
+  msgs.forEach(m => {
+    const d = new Date(m.ts);
+    const dateStr = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
+    const timeStr = d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    if (dateStr !== lastDate) {
+      html += `<div class="chat-date-sep">${dateStr}</div>`;
+      lastDate = dateStr;
+    }
+    const isMine = m.from === currentUser.matricula;
+    const photo = photos[m.from];
+    const ini = initials(m.nome || '??');
+    const avatarHtml = photo
+      ? `<div class="chat-msg-avatar"><img src="${photo}" alt="${ini}"></div>`
+      : `<div class="chat-msg-avatar" style="background:${chatColor(m.from)}">${ini}</div>`;
+    html += `<div class="chat-msg ${isMine ? 'mine' : 'other'}">
+      ${isMine ? '' : avatarHtml}
+      <div>
+        ${isMine ? '' : `<div class="chat-msg-sender">${m.nome} · <span style="font-weight:500;color:var(--gray-400)">${m.funcao}</span></div>`}
+        <div class="chat-bubble">${escapeHtml(m.text)}</div>
+        <div class="chat-msg-meta">${timeStr}</div>
+      </div>
+      ${isMine ? avatarHtml : ''}
+    </div>`;
+  });
+  return html;
+}
+
+/* ---------- Lista de profissionais ---------- */
+async function chatLoadProfessionals() {
+  const el = document.getElementById('chat-people-list');
+  try {
+    if (!chatProfessionals.length) {
+      const rows = await fetchSheet('PROFISSIONAIS');
+      chatProfessionals = rows.filter(r => r.MATRICULA && r.NOME).map(r => ({
+        matricula: (r.MATRICULA||'').toString().trim(),
+        nome: (r.NOME||'').toString().trim(),
+        funcao: (r.FUNCAO||'').toString().trim()
+      }));
+    }
+    chatRenderPeopleList(el);
+  } catch(e) {
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-triangle-exclamation"></i><p>Não foi possível carregar a equipe.</p></div>';
+  }
+}
+
+function chatRenderPeopleList(el) {
+  if (!el) return;
+  const photos = chatGetPhotos();
+  const others = chatProfessionals.filter(p => p.matricula !== currentUser.matricula);
+  if (!others.length) {
+    el.innerHTML = '<div class="empty-state"><i class="fas fa-user-group"></i><p>Nenhum profissional cadastrado.</p></div>';
+    return;
+  }
+  el.innerHTML = others.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p => {
+    const photo = photos[p.matricula];
+    const ini = initials(p.nome);
+    const avatarHtml = photo
+      ? `<div class="chat-person-avatar"><img src="${photo}" alt="${ini}"></div>`
+      : `<div class="chat-person-avatar" style="background:${chatColor(p.matricula)}">${ini}</div>`;
+    // check unread DM
+    const key = chatDmKey(currentUser.matricula, p.matricula);
+    const msgs = chatGetMsgs(key);
+    const lastReadTs = chatLastRead['dm_'+p.matricula] || 0;
+    const unread = msgs.filter(m => m.from !== currentUser.matricula && m.ts > lastReadTs).length;
+    return `<div class="chat-person" onclick="chatOpenDm(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      ${avatarHtml}
+      <div class="chat-person-info">
+        <div class="chat-person-name">${p.nome}</div>
+        <div class="chat-person-role">${p.funcao}</div>
+      </div>
+      <div class="chat-person-unread ${unread ? 'show' : ''}">${unread||''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- Foto de perfil ---------- */
+function chatUploadPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) {
+    alert('A foto deve ter menos de 500KB. Tente uma imagem menor.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    // Redimensionar para max 200x200
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const max = 120;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > max) { h = h*max/w; w = max; } }
+      else { if (h > max) { w = w*max/h; h = max; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const small = canvas.toDataURL('image/jpeg', 0.82);
+      // Salva no localStorage
+      const photos = chatGetPhotos();
+      photos[currentUser.matricula] = small;
+      localStorage.setItem(CHAT_KEY_PHOTOS, JSON.stringify(photos));
+      // Atualiza UI
+      chatApplyPhoto(currentUser.matricula, document.getElementById('chat-profile-photo-big'), currentUser.nome);
+      chatApplyPhoto(currentUser.matricula, document.getElementById('avatar-btn'), currentUser.nome);
+      // Tenta salvar na planilha (col D da aba PROFISSIONAIS) — via gsPost
+      gsPost('updateProfilePhoto', { matricula: currentUser.matricula, photo: small })
+        .catch(() => {}); // silencia falha — foto já está no localStorage
+    };
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+function chatApplyPhoto(matricula, containerEl, nome) {
+  if (!containerEl) return;
+  const photos = chatGetPhotos();
+  const photo = photos[matricula];
+  // Special case: topbar avatar
+  if (containerEl.id === 'avatar-btn') {
+    const imgEl = document.getElementById('avatar-photo');
+    const iniEl = document.getElementById('avatar-initials');
+    if (photo && imgEl) {
+      imgEl.src = photo; imgEl.style.display = 'block';
+      if (iniEl) iniEl.style.display = 'none';
+    } else {
+      if (imgEl) imgEl.style.display = 'none';
+      if (iniEl) { iniEl.style.display = ''; iniEl.textContent = initials(nome||'??'); }
+    }
+    return;
+  }
+  if (photo) {
+    containerEl.innerHTML = `<img src="${photo}" alt="${initials(nome||'')}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  } else {
+    const ini = initials(nome || '??');
+    if (!containerEl.querySelector('img')) {
+      containerEl.innerHTML = `<span>${ini}</span>`;
+    }
+  }
+}
+
+/* ---------- Badge de não-lidas ---------- */
+function chatUpdateBadge() {
+  const badge = document.getElementById('chat-fab-badge');
+  // geral
+  const geralMsgs = chatGetMsgs(CHAT_KEY_GERAL);
+  const lastGeralRead = chatLastRead['geral'] || 0;
+  let unread = geralMsgs.filter(m => m.from !== currentUser.matricula && m.ts > lastGeralRead).length;
+  // DMs
+  chatProfessionals.forEach(p => {
+    if (p.matricula === currentUser.matricula) return;
+    const key = chatDmKey(currentUser.matricula, p.matricula);
+    const msgs = chatGetMsgs(key);
+    const lr = chatLastRead['dm_'+p.matricula] || 0;
+    unread += msgs.filter(m => m.from !== currentUser.matricula && m.ts > lr).length;
+  });
+  badge.textContent = unread > 9 ? '9+' : unread;
+  badge.classList.toggle('show', unread > 0);
+}
+
+function chatMarkRead(channel) {
+  chatLastRead[channel] = Date.now();
+  localStorage.setItem('uparc_chat_lastread', JSON.stringify(chatLastRead));
+}
+
+/* ---------- Polling ---------- */
+function chatStartPoll() {
+  if (chatPollTimer) clearInterval(chatPollTimer);
+  chatPollTimer = setInterval(() => {
+    chatUpdateBadge();
+    if (!chatOpen) return;
+    if (chatCurrentTab === 'geral') { chatRenderGeral(); }
+    else if (chatCurrentTab === 'dm') { chatRenderDm(); }
+    else if (chatCurrentTab === 'pessoas') { chatRenderPeopleList(document.getElementById('chat-people-list')); }
+  }, CHAT_POLL_MS);
+}
+
+/* ---------- Scroll ---------- */
+function chatScrollBottom(elId) {
+  const el = document.getElementById(elId);
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+/* ---------- Storage helpers ---------- */
+function chatGetMsgs(key) {
+  try { return JSON.parse(localStorage.getItem(key)||'[]'); } catch(e) { return []; }
+}
+function chatSaveMsgs(key, msgs) {
+  localStorage.setItem(key, JSON.stringify(msgs));
+}
+function chatGetPhotos() {
+  try { return JSON.parse(localStorage.getItem(CHAT_KEY_PHOTOS)||'{}'); } catch(e) { return {}; }
+}
+function chatDmKey(m1, m2) {
+  return CHAT_KEY_DM + [m1, m2].sort().join('_vs_');
+}
+function chatColor(seed) {
+  const colors = ['#1A6FC4','#27AE60','#D97706','#7C3AED','#0E7490','#DB2777','#DC2626','#059669'];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = seed.charCodeAt(i) + ((h << 5) - h);
+  return colors[Math.abs(h) % colors.length];
+}
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+/* ============================================================
+   AUTO-RESTORE SESSION
+============================================================ */
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('uparc_user');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      initApp();
+    } catch(e) { sessionStorage.removeItem('uparc_user'); }
+  }
+  ['inp-matricula','inp-nome','inp-funcao'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  });
+});
+
+/* ============================================================
+   PWA — SERVICE WORKER
+============================================================ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+</script>
+</body>
+</html>
