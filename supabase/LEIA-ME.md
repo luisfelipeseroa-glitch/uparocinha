@@ -44,7 +44,7 @@ Subir os arquivos para o GitHub (branch principal). O `sw.js` agora busca sempre
 | Documentos Institucionais | todos | só gestores |
 | Escala de Plantão | todos | ADM e gestores |
 | Evento Adverso | todos (todos notificam) | relatório/análise: só gestores |
-| Passagem de Plantão | assistenciais, gestores, ADM | **somente ADM** inclui, edita, recebe e exclui (editar/excluir exigem motivo, que fica na auditoria dos gestores) |
+| Passagem de Plantão | assistenciais, gestores, ADM | **ADM e gestores** incluem, editam, recebem e excluem (editar/excluir exigem motivo, que fica na auditoria dos gestores) |
 | Protocolos Clínicos | assistenciais e gestores | — |
 | Relatório Gerencial | todos | só gestores |
 | RH, Treinamento, Safety Huddle, Manutenção, Chat | todos | RH/Treinamento: gestores autorizam/validam |

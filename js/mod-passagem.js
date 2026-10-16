@@ -1,4 +1,4 @@
-/* Passagem de Plantão — ver: assistenciais, gestores e ADM. Só ADM insere, edita, recebe e exclui
+/* Passagem de Plantão — ver: assistenciais, gestores e ADM. Só ADM e gestores inserem, editam, recebem e excluem
    (editar/excluir exigem o motivo, que fica registrado na auditoria). */
 (function () {
   'use strict';
@@ -42,7 +42,7 @@
     let data = U.dataPlantao(), turno = U.turnoAtual(), lista = [];
     const desenhar = async () => {
       lista = await cards(data, turno);
-      el.innerHTML = (pode.criar ? '' : U.leituraAviso('Somente a administração lança, recebe, edita e exclui a passagem de plantão. Você pode consultar.')) +
+      el.innerHTML = (pode.criar ? '' : U.leituraAviso('Somente a administração e os gestores lançam, recebem, editam e excluem a passagem de plantão. Você pode consultar.')) +
         `<div class="barra"><input type="date" id="pp-dia" value="${data}" style="padding:8px;border:1.5px solid var(--gray-200);border-radius:6px">
           <select id="pp-turno" style="padding:9px;border:1.5px solid var(--gray-200);border-radius:6px">${U.TURNOS.map(t => `<option value="${t[0]}"${t[0] === turno ? ' selected' : ''}>${t[1]}</option>`).join('')}</select>
           <span class="tag azul">${lista.length} paciente(s)</span><span class="tag verde">${lista.filter(c => c.recebido_em).length} recebido(s)</span><span class="espaco"></span>

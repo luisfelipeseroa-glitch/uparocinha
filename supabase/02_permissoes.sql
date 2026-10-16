@@ -90,12 +90,12 @@ begin
   perform public._dar('evento_relatorio', 'editar', gestores);   -- analisar / concluir
 
   -- 7. Passagem de Plantão: ver = assistenciais, gestores e ADM (não vigilante, ASG, maqueiro)
-  --    inserir / editar / receber / excluir = somente ADM
+  --    inserir / editar / receber / excluir = ADM e gestores (gestor pode tudo)
   perform public._dar('passagem', 'ver',     assistenc || gestores || adms);
-  perform public._dar('passagem', 'criar',   adms);
-  perform public._dar('passagem', 'editar',  adms);
-  perform public._dar('passagem', 'receber', adms);
-  perform public._dar('passagem', 'excluir', adms);
+  perform public._dar('passagem', 'criar',   adms || gestores);
+  perform public._dar('passagem', 'editar',  adms || gestores);
+  perform public._dar('passagem', 'receber', adms || gestores);
+  perform public._dar('passagem', 'excluir', adms || gestores);
   perform public._dar('passagem_auditoria', 'ver', gestores);    -- quem alterou/excluiu e por quê
 
   -- 8. Protocolos Clínicos: assistenciais e gestores (não ADM, vigilante, maqueiro, ASG)

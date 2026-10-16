@@ -177,7 +177,10 @@ await botoes('Assistente Administrativo', 'passagem', '[data-ed]', true, 'Editar
 await botoes('Assistente Administrativo', 'passagem', '[data-rc]', true, 'Receber');
 await botoes('Médico', 'passagem', '#pp-novo', false, 'Novo paciente');
 await botoes('Médico', 'passagem', '[data-ex],[data-ed],[data-rc]', false, 'Editar/Excluir/Receber');
-await botoes('Gestor Assistencial', 'passagem', '[data-ex],[data-ed],[data-rc],#pp-novo', false, 'Editar/Excluir/Receber/Novo');
+await botoes('Gestor Assistencial', 'passagem', '#pp-novo', true, 'Novo paciente (gestor pode tudo)');
+await botoes('Gestor Assistencial', 'passagem', '[data-ex]', true, 'Excluir (gestor)');
+await botoes('Gestor Assistencial', 'passagem', '[data-ed]', true, 'Editar (gestor)');
+await botoes('Gestor Assistencial', 'passagem', '[data-rc]', true, 'Receber (gestor)');
 await botoes('Gestor Assistencial', 'relatorio', '#rg-ed', true, 'Editar mês');
 await botoes('Médico', 'relatorio', '#rg-ed', false, 'Editar mês');
 await botoes('Vigilante', 'relatorio', '#rg-ed', false, 'Editar mês');

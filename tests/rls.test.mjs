@@ -103,10 +103,10 @@ const regras = [
   ['6. Evento adverso: todos notificam',             'evento', 'criar',   TODOS],
   ['6. Evento adverso: só gestor acessa o relatório','evento_relatorio', 'ver', G],
   ['7. Passagem: ver = assistenciais, gestores, adm','passagem', 'ver',   [...S, ...G, ...A]],
-  ['7. Passagem: só adm insere',                     'passagem', 'criar', A],
-  ['7. Passagem: só adm edita',                      'passagem', 'editar', A],
-  ['7. Passagem: só adm recebe',                     'passagem', 'receber', A],
-  ['7. Passagem: só adm exclui',                     'passagem', 'excluir', A],
+  ['7. Passagem: adm e gestor inserem',              'passagem', 'criar', [...A, ...G]],
+  ['7. Passagem: adm e gestor editam',               'passagem', 'editar', [...A, ...G]],
+  ['7. Passagem: adm e gestor recebem',              'passagem', 'receber', [...A, ...G]],
+  ['7. Passagem: adm e gestor excluem',              'passagem', 'excluir', [...A, ...G]],
   ['8. Protocolos: assistenciais e gestores',        'protocolos', 'ver', [...S, ...G]],
   ['9. Relatório gerencial: todos veem',             'relatorio', 'ver',  TODOS],
   ['9. Relatório gerencial: só gestor inclui',       'relatorio', 'criar', G],
@@ -211,7 +211,9 @@ const rNIR = await insCard('NIR');
 ok(rNIR.ok, 'adm (NIR) insere passagem');
 const cardId = rNIR.rows?.[0]?.id;
 ok(!(await insCard('Médico')).ok, 'médico NÃO insere passagem');
-ok(!(await insCard('Gestor Assistencial')).ok, 'gestor NÃO insere passagem (somente adm)');
+const rGest = await insCard('Gestor Assistencial');
+ok(rGest.ok, 'gestor insere passagem');
+if (rGest.ok) ok((await tenta('Gestor Assistencial', `select public.passagem_excluir($1::uuid, 'Teste de inclusão pelo gestor')`, [rGest.rows[0].id])).ok, 'gestor exclui (com motivo) o que incluiu');
 ok(await lerN(`select * from public.passagem_cards`, 'Médico') === 1, 'assistencial vê passagem');
 ok(await lerN(`select * from public.passagem_cards`, 'Gestor Administrativo') === 1, 'gestor vê passagem');
 ok(await lerN(`select * from public.passagem_cards`, 'Recepcionista') === 1, 'adm vê passagem');
@@ -224,23 +226,23 @@ const edit = (quem, motivo) => tenta(quem, `select public.passagem_editar($1::uu
 ok(!(await edit('NIR', '')).ok, 'editar sem motivo é recusado');
 ok(!(await edit('NIR', 'abc')).ok, 'editar com motivo curto é recusado');
 ok(!(await edit('NIR', null)).ok, 'editar com motivo nulo é recusado');
-ok(!(await edit('Gestor Assistencial', 'Correção de leito informado errado')).ok, 'gestor NÃO edita passagem (somente adm)');
+ok(!(await edit('Gestor Assistencial', 'abc')).ok, 'gestor também precisa informar o motivo ao editar');
 ok(!(await edit('Médico', 'Correção de leito informado errado')).ok, 'médico NÃO edita passagem');
 ok((await edit('NIR', 'Leito informado errado na passagem')).ok, 'adm edita passagem com motivo');
 ok((await tenta('NIR', `select leito, prioridade from public.passagem_cards`)).rows[0].leito === '07', 'edição aplicada');
-ok(await lerN(`select * from public.passagem_auditoria`, 'Gestor Assistencial') === 1, 'gestor vê auditoria da edição');
+ok(await lerN(`select * from public.passagem_auditoria where acao='editar'`, 'Gestor Assistencial') === 1, 'gestor vê auditoria da edição');
 ok(await lerN(`select * from public.passagem_auditoria`, 'NIR') === 0, 'adm NÃO vê a auditoria');
-const aud = (await tenta('Gestor Assistencial', `select motivo, usuario_nome, dados_antes->>'leito' as antes, dados_depois->>'leito' as depois from public.passagem_auditoria`)).rows[0];
+const aud = (await tenta('Gestor Assistencial', `select motivo, usuario_nome, dados_antes->>'leito' as antes, dados_depois->>'leito' as depois from public.passagem_auditoria where acao='editar'`)).rows[0];
 ok(aud.motivo === 'Leito informado errado na passagem' && aud.usuario_nome === 'Teste NIR' && aud.antes === '03' && aud.depois === '07', 'auditoria guarda motivo, autor, antes e depois');
 ok(!(await tenta('Médico', `select public.passagem_receber($1::uuid)`, [cardId])).ok, 'médico NÃO recebe passagem');
 ok((await tenta('Recepcionista', `select public.passagem_receber($1::uuid)`, [cardId])).ok, 'adm recebe passagem');
 ok(!(await tenta('Recepcionista', `select public.passagem_receber($1::uuid)`, [cardId])).ok, 'não recebe duas vezes');
 ok((await tenta('Gestor Assistencial', `select recebido_por_nome from public.passagem_cards`)).rows[0].recebido_por_nome === 'Teste Recepcionista', 'recebimento registra quem recebeu');
 ok(!(await tenta('NIR', `select public.passagem_excluir($1::uuid, '')`, [cardId])).ok, 'excluir sem motivo é recusado');
-ok(!(await tenta('Gestor Assistencial', `select public.passagem_excluir($1::uuid, 'Registro duplicado no turno')`, [cardId])).ok, 'gestor NÃO exclui passagem');
+ok(!(await tenta('Gestor Assistencial', `select public.passagem_excluir($1::uuid, '')`, [cardId])).ok, 'gestor também precisa informar o motivo ao excluir');
 ok((await tenta('NIR', `select public.passagem_excluir($1::uuid, 'Registro duplicado no turno')`, [cardId])).ok, 'adm exclui com motivo');
 ok(await lerN(`select * from public.passagem_cards`, 'NIR') === 0, 'card excluído');
-ok(await lerN(`select * from public.passagem_auditoria where acao='excluir'`, 'Gestor Assistencial') === 1, 'exclusão ficou na auditoria');
+ok(await lerN(`select * from public.passagem_auditoria where acao='excluir'`, 'Gestor Assistencial') === 2, 'exclusões (do gestor e do adm) ficaram na auditoria');
 ok(!(await tenta('NIR', `delete from public.passagem_auditoria`)).ok || (await tenta('NIR', `delete from public.passagem_auditoria`)).n === 0, 'ninguém apaga a auditoria');
 
 // Dieta
