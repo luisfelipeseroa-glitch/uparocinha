@@ -55,6 +55,7 @@ const CARGOS = [
   [/COORDENADOR(A)? DE ENFERMEAGEM|COORDENADOR(A)? DE ENFERMAGEM/, 'Gestor Assistencial', 'gestor'],
   [/COORDENADOR(A)? MEDIC[OA]/, 'Gestor Assistencial', 'gestor'],
   [/RH FOCAL/, 'RH Focal', 'gestor'],
+  [/(AUXILIAR|ASSISTENTE) ADMINISTRATIVO ?\/ ?RECEPCAO|RECEPCIONISTA|RECEPCAO/, 'Recepcionista', 'adm'],
   [/ASSISTENTE ADMINISTRATIVO( PLENO)?/, 'Assistente Administrativo', 'adm'],
   [/AUXILIAR ADMINISTRATIVO/, 'Assistente Administrativo', 'adm'],
   [/ASSISTENTE DE TI/, 'TI', 'adm'],
