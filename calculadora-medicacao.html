@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora UPA ROCINHA — Medicamentos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f3ef;
+  --surface: #ffffff;
+  --surface2: #f0ede8;
+  --border: #e0dbd2;
+  --border2: #ccc7bc;
+  --text: #1a1815;
+  --text2: #6b6560;
+  --text3: #9e9890;
+  --accent: #2d5f4e;
+  --accent2: #3d7a63;
+  --accent-light: #e8f2ee;
+  --red: #b84040;
+  --red-light: #fdf0f0;
+  --amber: #9a6f1e;
+  --amber-light: #fdf6e8;
+  --blue: #2a4f7c;
+  --blue-light: #edf2fa;
+  --pill-analgesia: #8b3a3a;
+  --pill-antibiotico: #2d5f4e;
+  --pill-respiratorio: #2a4f7c;
+  --pill-digestivo: #6b4f2a;
+  --pill-alergia: #6b2d7c;
+  --pill-neurologia: #3a5c8b;
+  --pill-cardiovascular: #8b2d4a;
+  --pill-dermatologia: #4a7c5c;
+  --pill-hormonios: #7c5c2d;
+  --pill-antiparasitario: #3d5a2a;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--accent);
+  color: #fff;
+  padding: 0 0 0 0;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+}
+.header-inner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+.header-logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px; letter-spacing: -0.5px;
+  color: #fff;
+}
+.header-logo span { color: #a8d4c0; font-size: 13px; display:block; font-family:'DM Sans',sans-serif; font-weight:300; letter-spacing:0; }
+.header-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px; color: rgba(255,255,255,0.8);
+  font-weight: 500;
+}
+
+/* ── CATEGORY TABS ── */
+.cat-tabs {
+  display: flex; gap: 0; overflow-x: auto;
+  padding: 0 24px;
+  background: var(--accent);
+  scrollbar-width: none;
+}
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tab {
+  padding: 10px 16px;
+  font-size: 12px; font-weight: 500;
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.cat-tab:hover { color: rgba(255,255,255,0.9); }
+.cat-tab.active { color: #fff; border-bottom-color: #a8d4c0; }
+
+/* ── LAYOUT ── */
+.layout {
+  display: flex; flex: 1;
+  height: calc(100vh - 97px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 280px; min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-search {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.search-wrap {
+  position: relative;
+}
+.search-wrap svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--text3);
+}
+.sidebar-search input {
+  width: 100%; padding: 8px 10px 8px 32px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  font-size: 13px; font-family: 'DM Sans', sans-serif;
+  background: var(--surface2);
+  color: var(--text);
+  outline: none;
+}
+.sidebar-search input:focus { border-color: var(--accent2); }
+.sidebar-search input::placeholder { color: var(--text3); }
+
+.med-list { overflow-y: auto; flex: 1; }
+
+.med-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.med-item:hover { background: var(--surface2); }
+.med-item.active { background: var(--accent-light); border-left: 3px solid var(--accent); }
+.med-item-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.med-item-sub { font-size: 11px; color: var(--text3); }
+
+/* ── MAIN CONTENT ── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.welcome-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 40px;
+  color: var(--text2);
+}
+.welcome-state h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px; color: var(--text);
+  margin-bottom: 10px;
+}
+.welcome-state p { font-size: 15px; line-height: 1.6; max-width: 420px; }
+
+/* ── MED CARD ── */
+.med-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.card-top {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 16px; align-items: flex-start;
+}
+
+.card-icon {
+  width: 48px; height: 48px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+
+.card-meta { flex: 1; }
+.card-meta h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px; color: var(--text); margin-bottom: 4px;
+}
+.card-meta .dci { font-size: 13px; color: var(--text2); font-style: italic; margin-bottom: 10px; }
+
+.badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge {
+  font-size: 11px; font-weight: 500; padding: 3px 10px;
+  border-radius: 20px; border: 1px solid;
+}
+
+/* ── CALCULATOR ── */
+.calc-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.calc-header {
+  padding: 14px 20px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.calc-body { padding: 20px; }
+
+.calc-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px; margin-bottom: 18px;
+}
+.calc-field label {
+  display: block; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text2); margin-bottom: 6px;
+}
+.calc-field input, .calc-field select {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  font-size: 14px; font-family: 'DM Sans', sans-serif;
+  background: var(--surface2); color: var(--text);
+  outline: none; transition: border 0.2s;
+}
+.calc-field input:focus, .calc-field select:focus {
+  border-color: var(--accent2);
+  background: #fff;
+}
+
+.dose-ranges {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.dose-ranges-title { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.dose-range-row {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.dose-chip {
+  font-size: 12px; padding: 4px 12px;
+  border-radius: 20px; cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text2);
+  transition: all 0.15s;
+}
+.dose-chip:hover, .dose-chip.selected {
+  background: var(--accent); color: #fff;
+  border-color: var(--accent);
+}
+
+.calc-btn {
+  width: 100%; padding: 13px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 15px; font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer; transition: background 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.calc-btn:hover { background: var(--accent2); }
+.copy-btn:hover { background: var(--accent2) !important; }
+
+/* ── RESULT ── */
+.result-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px; margin-top: 18px;
+}
+.result-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  text-align: center;
+}
+.result-box.highlight {
+  background: var(--accent-light);
+  border-color: #b2d4c5;
+}
+.result-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.result-value { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--accent); }
+.result-unit { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.result-warning {
+  margin-top: 14px; padding: 10px 14px;
+  background: var(--amber-light);
+  border: 1px solid #e8d5a0;
+  border-radius: var(--radius-sm);
+  font-size: 12px; color: var(--amber); line-height: 1.5;
+}
+.result-error {
+  margin-top: 14px; padding: 10px 14px;
+  background: var(--red-light);
+  border: 1px solid #f0c0c0;
+  border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--red); line-height: 1.5;
+}
+
+/* ── INFO SECTIONS ── */
+.info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.info-card-header {
+  padding: 12px 18px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text2);
+}
+.info-card-body { padding: 16px 18px; }
+
+.info-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.info-item label {
+  font-size: 11px; color: var(--text3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  display: block; margin-bottom: 4px;
+}
+.info-item p { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+.alert-box {
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; line-height: 1.5; border-left: 3px solid;
+  margin-bottom: 10px;
+}
+.alert-danger { background: var(--red-light); border-color: var(--red); color: var(--red); }
+.alert-warning { background: var(--amber-light); border-color: var(--amber); color: var(--amber); }
+.alert-info { background: var(--blue-light); border-color: var(--blue); color: var(--blue); }
+
+/* ── CATEGORY COLORS ── */
+.cat-analgesia   { --cat: var(--pill-analgesia); }
+.cat-antibiotico { --cat: var(--pill-antibiotico); }
+.cat-respiratorio{ --cat: var(--pill-respiratorio); }
+.cat-digestivo   { --cat: var(--pill-digestivo); }
+.cat-alergia     { --cat: var(--pill-alergia); }
+.cat-neurologia  { --cat: var(--pill-neurologia); }
+.cat-cardiovascular { --cat: var(--pill-cardiovascular); }
+.cat-dermatologia { --cat: var(--pill-dermatologia); }
+.cat-hormonios   { --cat: var(--pill-hormonios); }
+.cat-antiparasitario { --cat: var(--pill-antiparasitario); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+@media (max-width: 900px) {
+  .calc-grid { grid-template-columns: 1fr 1fr; }
+  .result-grid { grid-template-columns: 1fr 1fr; }
+  .info-grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .sidebar { width: 220px; min-width: 220px; }
+  .calc-grid { grid-template-columns: 1fr; }
+  .result-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-logo">
+      Calculadora UPA ROCINHA 2026
+      <span>Calculadora por Peso.</span>
+    </div>
+    <div class="header-badge">RENAME 2024 · SUS · Ministério da Saúde</div>
+  </div>
+  <div class="cat-tabs" id="catTabs"></div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-search">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Buscar medicamento..." oninput="filterMeds(this.value)">
+      </div>
+    </div>
+    <div class="med-list" id="medList"></div>
+  </div>
+
+  <div class="main" id="mainContent">
+    <div class="welcome-state">
+      <div style="font-size:48px;margin-bottom:16px">💊</div>
+      <h2>Calculadora UPA ROCINHA 2026</h2>
+      <p>Selecione uma categoria acima e escolha um medicamento para calcular a dose por peso, volume em mL e quantidade de comprimidos.</p>
+      <div style="margin-top:24px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+        <span style="font-size:12px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--text2)">🎯 Dose por peso (mg/kg)</span>
+        <span style="font-size:12px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--text2)">💧 Volume em mL</span>
+        <span style="font-size:12px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--text2)">💊 Qtd. comprimidos</span>
+        <span style="font-size:12px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--text2)">⚠️ Alertas de dose máxima</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATABASE — RENAME 2024
+// ═══════════════════════════════════════════════
+const DB = {
+  analgesia: {
+    label: "Analgesia", icon: "🩹", color: "#8b3a3a",
+    meds: [
+      {
+        nome: "Paracetamol (Acetaminofeno)", dci: "Paracetamol",
+        atc: "N02BE01", grupo: "Analgésico / Antipirético", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 200 mg/mL (gotas)", tipo: "solucao", concentracao: 200, vol_por_dose_unit: 1 },
+          { desc: "Xarope 150 mg/5 mL", tipo: "solucao", concentracao: 30 },
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 },
+          { desc: "Comprimido 750 mg", tipo: "comprimido", concentracao: 750 }
+        ],
+        doses: [
+          { label: "Padrão (10–15 mg/kg)", min: 10, max: 15, intervalo: "a cada 4–6h", maxDose24h: 4000, obs: "Máximo 5x ao dia" }
+        ],
+        contraindicacoes: "Hepatopatia grave, hipersensibilidade, alcoolismo",
+        interacoes: "Varfarina (altas doses), rifampicina, álcool",
+        gestacao: "Cat. B — seguro",
+        obs: "⚠️ Superdosagem causa hepatotoxicidade grave. Antídoto: N-acetilcisteína. Dose máxima: 4 g/dia em adultos, 75 mg/kg/dia em crianças."
+      },
+      {
+        nome: "Ibuprofeno", dci: "Ibuprofeno",
+        atc: "M01AE01", grupo: "AINE", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 100 mg/5 mL", tipo: "solucao", concentracao: 20 },
+          { desc: "Suspensão oral 50 mg/mL (gotas)", tipo: "solucao", concentracao: 50 },
+          { desc: "Comprimido 200 mg", tipo: "comprimido", concentracao: 200 },
+          { desc: "Comprimido 400 mg", tipo: "comprimido", concentracao: 400 },
+          { desc: "Comprimido 600 mg", tipo: "comprimido", concentracao: 600 }
+        ],
+        doses: [
+          { label: "Analgesia / Febre (5–10 mg/kg)", min: 5, max: 10, intervalo: "a cada 6–8h", maxDose24h: 2400, obs: "Máximo 40 mg/kg/dia em crianças (anti-inflamatório)" }
+        ],
+        contraindicacoes: "IRC grave, 3º trimestre gestação, úlcera péptica ativa, hipersensibilidade a AINEs",
+        interacoes: "Varfarina, AAS, IECA, diuréticos, metotrexato, lítio",
+        gestacao: "Cat. B (1º/2º trim.) / Cat. D (3º trim.)",
+        obs: "Não usar em < 6 meses. Tomar com alimentos. Risco cardiovascular em uso prolongado."
+      },
+      {
+        nome: "Dipirona (Metamizol)", dci: "Dipirona sódica",
+        atc: "N02BB02", grupo: "Analgésico / Antipirético", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 500 mg/mL (gotas)", tipo: "solucao", concentracao: 500 },
+          { desc: "Xarope 50 mg/mL", tipo: "solucao", concentracao: 50 },
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 },
+          { desc: "Solução injetável 500 mg/mL", tipo: "solucao_inj", concentracao: 500 }
+        ],
+        doses: [
+          { label: "Padrão (10–15 mg/kg)", min: 10, max: 15, intervalo: "a cada 6–8h", maxDose24h: 4000, obs: "Máximo 4x ao dia" }
+        ],
+        contraindicacoes: "Hipersensibilidade a pirazolonas, discrasias sanguíneas, granulocitopenia, < 3 meses de vida",
+        interacoes: "Ciclosporina, metotrexato, anticoagulantes, clorpromazina",
+        gestacao: "Cat. C — evitar no 3º trimestre",
+        obs: "Risco raro de agranulocitose. Gotinhas: 1 gota = 25 mg (equivalência padrão). Se febre não ceder após 72h, reavaliar."
+      },
+      {
+        nome: "Morfina", dci: "Morfina sulfato",
+        atc: "N02AA01", grupo: "Opioide agonista mu", componente: "Básico/Hospitalar",
+        formas: [
+          { desc: "Solução oral 1 mg/mL", tipo: "solucao", concentracao: 1 },
+          { desc: "Solução oral 10 mg/5 mL (2 mg/mL)", tipo: "solucao", concentracao: 2 },
+          { desc: "Comprimido 10 mg", tipo: "comprimido", concentracao: 10 },
+          { desc: "Comprimido 30 mg (lib. controlada)", tipo: "comprimido", concentracao: 30 },
+          { desc: "Sol. injetável 1 mg/mL", tipo: "solucao_inj", concentracao: 1 },
+          { desc: "Sol. injetável 10 mg/mL", tipo: "solucao_inj", concentracao: 10 }
+        ],
+        doses: [
+          { label: "Dor moderada-grave VO (0,2–0,5 mg/kg)", min: 0.2, max: 0.5, intervalo: "a cada 4h", maxDose24h: 200, obs: "Titular pela resposta e efeitos adversos" },
+          { label: "IV/SC (0,05–0,1 mg/kg)", min: 0.05, max: 0.1, intervalo: "a cada 2–4h", maxDose24h: 100, obs: "Dose IV inicial; ajustar" }
+        ],
+        contraindicacoes: "Depressão respiratória grave, íleo paralítico, TCE com HIC, IMAO nas últimas 2 semanas",
+        interacoes: "BZD (risco respiratório), álcool, IMAO, outros depressores SNC",
+        gestacao: "Cat. C — evitar perto do parto",
+        obs: "⚠️ Antídoto: Naloxona 0,01 mg/kg IV. Sempre prescrever laxativo profilático (constipação). Controle de receituário especial."
+      },
+      {
+        nome: "Tramadol", dci: "Tramadol cloridrato",
+        atc: "N02AX02", grupo: "Opioide misto / IRSN", componente: "Básico",
+        formas: [
+          { desc: "Gotas 100 mg/mL (1 gota = 2,5 mg)", tipo: "solucao", concentracao: 100 },
+          { desc: "Cápsula 50 mg", tipo: "comprimido", concentracao: 50 },
+          { desc: "Comprimido 100 mg (lib. prolongada)", tipo: "comprimido", concentracao: 100 },
+          { desc: "Sol. injetável 50 mg/mL", tipo: "solucao_inj", concentracao: 50 }
+        ],
+        doses: [
+          { label: "Dor moderada (1–2 mg/kg)", min: 1, max: 2, intervalo: "a cada 6–8h", maxDose24h: 400, obs: "Não usar < 12 anos" }
+        ],
+        contraindicacoes: "< 12 anos, epilepsia não controlada, IMAO, hipersensibilidade, insuf. respiratória grave",
+        interacoes: "ISRS (síndrome serotoninérgica), IMAO, BZD, álcool, carbamazepina",
+        gestacao: "Cat. C — evitar",
+        obs: "Risco de convulsão. Síndrome de abstinência com uso prolongado. Receituário de controle especial."
+      }
+    ]
+  },
+
+  antibiotico: {
+    label: "Antibiótico", icon: "🦠", color: "#2d5f4e",
+    meds: [
+      {
+        nome: "Amoxicilina", dci: "Amoxicilina tri-hidratada",
+        atc: "J01CA04", grupo: "Penicilina (AWaRe: Access)", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 250 mg/5 mL", tipo: "solucao", concentracao: 50 },
+          { desc: "Cápsula 500 mg", tipo: "comprimido", concentracao: 500 },
+          { desc: "Comprimido 875 mg", tipo: "comprimido", concentracao: 875 }
+        ],
+        doses: [
+          { label: "Infecções leves-moderadas (25 mg/kg/dia)", min: 25, max: 25, intervalo: "dividido a cada 8h (8,3 mg/kg/dose)", maxDose24h: 3000, obs: "Dose por administração: total/3" },
+          { label: "Infecções graves / OMA (45 mg/kg/dia)", min: 45, max: 45, intervalo: "dividido a cada 12h (22,5 mg/kg/dose)", maxDose24h: 4000, obs: "OMA com resistência suspeita" }
+        ],
+        contraindicacoes: "Alergia a penicilinas ou cefalosporinas (cautela)",
+        interacoes: "Metotrexato, anticoagulantes, alopurinol, ACO (redução de eficácia)",
+        gestacao: "Cat. B — seguro",
+        obs: "AWaRe Access — antibiótico de primeira escolha. Duração típica: 7–10 dias. Suspensão: verificar prazo após reconstituição (7–14 dias refrigerado)."
+      },
+      {
+        nome: "Amoxicilina + Clavulanato", dci: "Amoxicilina + Ác. clavulânico",
+        atc: "J01CR02", grupo: "Penicilina + Inibidor β-lactamase (AWaRe: Watch)", componente: "Básico",
+        formas: [
+          { desc: "Suspensão 250+62,5 mg/5 mL", tipo: "solucao", concentracao: 50 },
+          { desc: "Suspensão 400+57 mg/5 mL (ped. alta dose)", tipo: "solucao", concentracao: 80 },
+          { desc: "Comprimido 500+125 mg", tipo: "comprimido", concentracao: 500 },
+          { desc: "Comprimido 875+125 mg", tipo: "comprimido", concentracao: 875 }
+        ],
+        doses: [
+          { label: "Padrão (25–45 mg/kg/dia de amox.)", min: 25, max: 45, intervalo: "dividido a cada 8–12h", maxDose24h: 3000, obs: "Calcular pela componente amoxicilina" }
+        ],
+        contraindicacoes: "Alergia a penicilinas, icterícia/hepatopatia por amox-clavulanato prévia",
+        interacoes: "Metotrexato, anticoagulantes, alopurinol",
+        gestacao: "Cat. B — seguro",
+        obs: "AWaRe Watch. Para otite resistente, sinusite bacteriana, mordeduras de animal. Tomar com refeição (reduz distúrbios GI)."
+      },
+      {
+        nome: "Azitromicina", dci: "Azitromicina di-hidratada",
+        atc: "J01FA10", grupo: "Macrolídeo (AWaRe: Watch)", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 200 mg/5 mL", tipo: "solucao", concentracao: 40 },
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 }
+        ],
+        doses: [
+          { label: "Infecções respiratórias (10 mg/kg/dia)", min: 10, max: 10, intervalo: "1x ao dia por 3–5 dias", maxDose24h: 500, obs: "Dose única diária" },
+          { label: "DST - Clamídia (1 g dose única adulto)", min: 15, max: 15, intervalo: "dose única", maxDose24h: 1000, obs: "Ajustar para 1g em adultos" }
+        ],
+        contraindicacoes: "QT prolongado, hepatopatia grave, hipersensibilidade a macrolídeos",
+        interacoes: "QT-prolongadores, antiácidos, varfarina, estatinas",
+        gestacao: "Cat. B — seguro",
+        obs: "AWaRe Watch — usar somente quando amoxicilina não é adequada. Meia-vida longa permite cursos de 3–5 dias."
+      },
+      {
+        nome: "Metronidazol", dci: "Metronidazol",
+        atc: "J01XD01", grupo: "Nitroimidazol (AWaRe: Access)", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 40 mg/mL", tipo: "solucao", concentracao: 40 },
+          { desc: "Comprimido 250 mg", tipo: "comprimido", concentracao: 250 },
+          { desc: "Comprimido 400 mg", tipo: "comprimido", concentracao: 400 },
+          { desc: "Sol. injetável 5 mg/mL", tipo: "solucao_inj", concentracao: 5 }
+        ],
+        doses: [
+          { label: "Infecções anaeróbias (20–30 mg/kg/dia)", min: 20, max: 30, intervalo: "dividido a cada 8h", maxDose24h: 4000, obs: "Dose por adm: total/3" },
+          { label: "Giardíase (15 mg/kg/dia)", min: 15, max: 15, intervalo: "dividido a cada 8h por 5–7 dias", maxDose24h: 2000, obs: "" }
+        ],
+        contraindicacoes: "1º trimestre de gestação, hipersensibilidade a nitroimidazóis",
+        interacoes: "Álcool (reação dissulfiram-like), varfarina, fenitoína, lítio",
+        gestacao: "Cat. B (2º/3º trim.) — evitar no 1º trimestre",
+        obs: "Evitar álcool durante e por 48h após o término. AWaRe Access para infecções anaeróbias."
+      },
+      {
+        nome: "Sulfametoxazol + Trimetoprima", dci: "SMX + TMP (Cotrimoxazol)",
+        atc: "J01EE01", grupo: "Sulfonamida combinada (AWaRe: Access)", componente: "Básico",
+        formas: [
+          { desc: "Suspensão 200+40 mg/5 mL", tipo: "solucao", concentracao: 40 },
+          { desc: "Comprimido 400+80 mg", tipo: "comprimido", concentracao: 400 },
+          { desc: "Comprimido 800+160 mg (Forte)", tipo: "comprimido", concentracao: 800 }
+        ],
+        doses: [
+          { label: "ITU / Otite (SMX: 25–30 mg/kg/dia)", min: 25, max: 30, intervalo: "dividido a cada 12h", maxDose24h: 1600, obs: "Calcular pela componente sulfametoxazol" },
+          { label: "Pneumocistose - PCP (SMX: 75 mg/kg/dia)", min: 75, max: 100, intervalo: "dividido a cada 6h por 21 dias", maxDose24h: 6400, obs: "Dose alta para PCP" }
+        ],
+        contraindicacoes: "Alergia a sulfonamidas, anemia megaloblástica, IRC grave, < 2 meses de vida",
+        interacoes: "Metotrexato, varfarina, fenitoína, IECA (hipercalemia), hipoglicemiantes",
+        gestacao: "Cat. C — evitar no 3º trimestre e no 1º mês",
+        obs: "Hidratação adequada para evitar cristalúria. AWaRe Access. A concentração calculada é para SMX (componente principal)."
+      },
+      {
+        nome: "Ceftriaxona", dci: "Ceftriaxona sódica",
+        atc: "J01DD04", grupo: "Cefalosporina 3ª geração (AWaRe: Watch)", componente: "Hospitalar",
+        formas: [
+          { desc: "Sol. injetável 250 mg/mL (reconstituída)", tipo: "solucao_inj", concentracao: 250 },
+          { desc: "Sol. injetável 500 mg/mL (reconstituída)", tipo: "solucao_inj", concentracao: 500 }
+        ],
+        doses: [
+          { label: "Infecções graves (50–75 mg/kg/dia)", min: 50, max: 75, intervalo: "1x ao dia IV/IM", maxDose24h: 4000, obs: "Dose única diária (meia-vida longa)" },
+          { label: "Meningite bacteriana (100 mg/kg/dia)", min: 100, max: 100, intervalo: "dividido a cada 12h IV", maxDose24h: 4000, obs: "Dose máxima: 4 g/dia" }
+        ],
+        contraindicacoes: "Hipersensibilidade a cefalosporinas; NÃO diluir com solução contendo Ca++ em neonatos",
+        interacoes: "Ca++ IV (contraindicado em neonatos — precipitação), aminoglicosídeos",
+        gestacao: "Cat. B — seguro",
+        obs: "AWaRe Watch. Dose única diária é suficiente (exceto meningite). Não administrar simultaneamente com Ca++ IV."
+      },
+      {
+        nome: "Benzilpenicilina Benzatina", dci: "Benzilpenicilina benzatina",
+        atc: "J01CE08", grupo: "Penicilina depósito (AWaRe: Access)", componente: "Básico",
+        formas: [
+          { desc: "Sol. injetável (suspensão) 600.000 UI/frasco", tipo: "solucao_inj", concentracao: 60000 },
+          { desc: "Sol. injetável (suspensão) 1.200.000 UI/frasco", tipo: "solucao_inj", concentracao: 120000 }
+        ],
+        doses: [
+          { label: "Faringoamigdalite / Profilaxia FR (< 25 kg: 600.000 UI; ≥ 25 kg: 1.200.000 UI)", min: 25000, max: 50000, intervalo: "dose única IM profundo", maxDose24h: 2400000, obs: "< 25 kg: 600.000 UI; ≥ 25 kg: 1.200.000 UI dose única" },
+          { label: "Sífilis primária/secundária", min: 50000, max: 50000, intervalo: "dose única IM (2.400.000 UI adulto)", maxDose24h: 2400000, obs: "Adultos: 2.400.000 UI dose única IM" }
+        ],
+        contraindicacoes: "Alergia a penicilinas — NUNCA administrar IV",
+        interacoes: "Probenecida (aumenta níveis), metotrexato",
+        gestacao: "Cat. B — seguro (tratamento de sífilis)",
+        obs: "⚠️ NUNCA administrar por via IV (fatal). Ter adrenalina disponível. A dose é em UI — concentração em UI/mL. AWaRe Access."
+      }
+    ]
+  },
+
+  respiratorio: {
+    label: "Respiratório", icon: "🫁", color: "#2a4f7c",
+    meds: [
+      {
+        nome: "Salbutamol (Albuterol)", dci: "Salbutamol sulfato",
+        atc: "R03AC02", grupo: "Beta-2 agonista de curta ação (SABA)", componente: "Básico",
+        formas: [
+          { desc: "Xarope 0,4 mg/mL", tipo: "solucao", concentracao: 0.4 },
+          { desc: "Solução para nebulização 5 mg/mL", tipo: "solucao", concentracao: 5 },
+          { desc: "Comprimido 4 mg", tipo: "comprimido", concentracao: 4 },
+          { desc: "Aerossol dosimetrado 100 mcg/jato", tipo: "especial", concentracao: 0.1, unidade: "mg/jato" }
+        ],
+        doses: [
+          { label: "Broncoespasmo agudo nebulização (0,15 mg/kg)", min: 0.15, max: 0.15, intervalo: "a cada 20 min (3 doses) depois a cada 4–6h", maxDose24h: 10, obs: "Mínimo 2,5 mg; máximo 5 mg por nebulização" },
+          { label: "Xarope crônico (0,1 mg/kg)", min: 0.1, max: 0.15, intervalo: "a cada 6–8h", maxDose24h: 16, obs: "" }
+        ],
+        contraindicacoes: "Hipersensibilidade, taquicardia significativa, miocardiopatia hipertrófica obstrutiva",
+        interacoes: "Beta-bloqueadores (antagonismo), xantinas, corticosteroides, diuréticos (hipocalemia)",
+        gestacao: "Cat. C — usar com cautela",
+        obs: "Nebulização: diluir em SF 0,9% para volume total de 3–4 mL. Aerossol: 2–4 jatos quando necessário (máx. 8 jatos/dia)."
+      },
+      {
+        nome: "Budesonida (inalatória)", dci: "Budesonida",
+        atc: "R03BA02", grupo: "Corticoide inalatório (ICS)", componente: "Básico",
+        formas: [
+          { desc: "Suspensão para nebulização 0,25 mg/mL", tipo: "solucao", concentracao: 0.25 },
+          { desc: "Suspensão para nebulização 0,5 mg/mL", tipo: "solucao", concentracao: 0.5 },
+          { desc: "Aerossol dosimetrado 200 mcg/jato", tipo: "especial", concentracao: 0.2, unidade: "mg/jato" }
+        ],
+        doses: [
+          { label: "Asma leve-moderada (0,25–0,5 mg/dose)", min: 0.01, max: 0.01, intervalo: "2x ao dia nebulização", maxDose24h: 1, obs: "Lactentes: 0,25–0,5 mg por nebulização 2x/dia; > 8 anos: 200–400 mcg inalatório 2x/dia" }
+        ],
+        contraindicacoes: "Hipersensibilidade, infecções fúngicas/bacterianas respiratórias não tratadas",
+        interacoes: "Itraconazol, ritonavir (aumentam concentração sistêmica)",
+        gestacao: "Cat. B — seguro em doses inalatórias terapêuticas",
+        obs: "Bochechar e cuspir após uso inalatório (previne candidíase oral). Lavar espaçador regularmente."
+      },
+      {
+        nome: "Prednisolona (crise de asma)", dci: "Prednisolona",
+        atc: "H02AB06", grupo: "Corticoide sistêmico oral", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 3 mg/mL", tipo: "solucao", concentracao: 3 },
+          { desc: "Solução oral 5 mg/mL", tipo: "solucao", concentracao: 5 },
+          { desc: "Comprimido 5 mg", tipo: "comprimido", concentracao: 5 },
+          { desc: "Comprimido 20 mg", tipo: "comprimido", concentracao: 20 }
+        ],
+        doses: [
+          { label: "Crise de asma (1–2 mg/kg/dia)", min: 1, max: 2, intervalo: "1x ao dia pela manhã por 3–5 dias", maxDose24h: 60, obs: "Máximo 40–60 mg/dia; não requer desmame em cursos < 7 dias" }
+        ],
+        contraindicacoes: "Infecções fúngicas sistêmicas sem tratamento, hipersensibilidade",
+        interacoes: "AINEs (ulcerogenicidade), insulina, rifampicina, vacinas vivas, antifúngicos azólicos",
+        gestacao: "Cat. C — usar apenas se necessário",
+        obs: "Cursos curtos (< 7 dias) não necessitam de desmame. Tomar com alimentos para reduzir irritação gástrica."
+      },
+      {
+        nome: "Amoxicilina (Pneumonia comunitária)", dci: "Amoxicilina — pneumonia",
+        atc: "J01CA04", grupo: "Penicilina (AWaRe: Access) — uso respiratório", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 250 mg/5 mL", tipo: "solucao", concentracao: 50 },
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 }
+        ],
+        doses: [
+          { label: "PAC leve em crianças (45–90 mg/kg/dia)", min: 45, max: 90, intervalo: "dividido a cada 8–12h por 7–10 dias", maxDose24h: 4000, obs: "Alta dose para cobertura de S. pneumoniae resistente" }
+        ],
+        contraindicacoes: "Alergia a penicilinas",
+        interacoes: "Metotrexato, anticoagulantes",
+        gestacao: "Cat. B — seguro",
+        obs: "AWaRe Access — primeira linha para pneumonia adquirida na comunidade (PAC) em criança e adulto hígido."
+      },
+      {
+        nome: "Ipratrópio (Brometo)", dci: "Brometo de ipratrópio",
+        atc: "R03BB01", grupo: "Anticolinérgico inalatório (SAMA)", componente: "Básico",
+        formas: [
+          { desc: "Solução para nebulização 0,25 mg/mL", tipo: "solucao", concentracao: 0.25 },
+          { desc: "Aerossol dosimetrado 20 mcg/jato", tipo: "especial", concentracao: 0.02, unidade: "mg/jato" }
+        ],
+        doses: [
+          { label: "Broncoespasmo agudo (0,025 mg/kg)", min: 0.025, max: 0.025, intervalo: "a cada 20 min × 3 doses, depois a cada 6h", maxDose24h: 1, obs: "Mínimo 0,25 mg; máximo 0,5 mg por nebulização" }
+        ],
+        contraindicacoes: "Hipersensibilidade à atropina ou derivados, glaucoma de ângulo fechado (relativo)",
+        interacoes: "Outros anticolinérgicos (efeito aditivo)",
+        gestacao: "Cat. B — preferir salbutamol como primeira escolha",
+        obs: "Usar em combinação com salbutamol na crise asmática moderada-grave. Evitar contato com os olhos."
+      }
+    ]
+  },
+
+  digestivo: {
+    label: "Digestivo", icon: "🫄", color: "#6b4f2a",
+    meds: [
+      {
+        nome: "Omeprazol", dci: "Omeprazol",
+        atc: "A02BC01", grupo: "Inibidor da bomba de prótons (IBP)", componente: "Básico",
+        formas: [
+          { desc: "Cápsula 10 mg", tipo: "comprimido", concentracao: 10 },
+          { desc: "Cápsula 20 mg", tipo: "comprimido", concentracao: 20 },
+          { desc: "Cápsula 40 mg", tipo: "comprimido", concentracao: 40 },
+          { desc: "Pó para suspensão 2 mg/mL (manipulado)", tipo: "solucao", concentracao: 2 }
+        ],
+        doses: [
+          { label: "DRGE / Úlcera péptica (0,7–3 mg/kg/dia)", min: 0.7, max: 3, intervalo: "1x ao dia em jejum", maxDose24h: 40, obs: "Crianças: 0,7–1 mg/kg/dia; Adultos: 20–40 mg/dia" }
+        ],
+        contraindicacoes: "Hipersensibilidade a benzimidazóis, uso concomitante com rilpivirina",
+        interacoes: "Clopidogrel (reduz ativação), metotrexato, ketoconazol, atazanavir",
+        gestacao: "Cat. C — usar se benefício superar risco",
+        obs: "Evitar uso > 8 semanas sem reavaliação. Risco de hipomagnesemia e fraturas com uso prolongado."
+      },
+      {
+        nome: "Metoclopramida", dci: "Metoclopramida cloridrato",
+        atc: "A03FA01", grupo: "Procinético / Antiemético", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 4 mg/mL (gotas)", tipo: "solucao", concentracao: 4 },
+          { desc: "Comprimido 10 mg", tipo: "comprimido", concentracao: 10 },
+          { desc: "Sol. injetável 5 mg/mL", tipo: "solucao_inj", concentracao: 5 }
+        ],
+        doses: [
+          { label: "Náuseas / Gastroparesia (0,1 mg/kg/dose)", min: 0.1, max: 0.15, intervalo: "a cada 6–8h", maxDose24h: 30, obs: "Máximo 0,5 mg/kg/dia; adultos: 10 mg 3x/dia" }
+        ],
+        contraindicacoes: "< 1 ano, epilepsia, feocromocitoma, obstrução intestinal, doença de Parkinson",
+        interacoes: "Antipsicóticos (risco extrapiramidal), lítio, digoxina, opioide",
+        gestacao: "Cat. B — usar com cautela, especialmente 1º trim.",
+        obs: "⚠️ Risco de discinesia tardia com uso prolongado. Evitar uso > 5 dias. Crianças: calcular dose com precisão."
+      },
+      {
+        nome: "Ondansetrona", dci: "Ondansetrona cloridrato",
+        atc: "A04AA01", grupo: "Antagonista 5-HT3 (Antiemético)", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 0,8 mg/mL", tipo: "solucao", concentracao: 0.8 },
+          { desc: "Comprimido 4 mg", tipo: "comprimido", concentracao: 4 },
+          { desc: "Comprimido 8 mg", tipo: "comprimido", concentracao: 8 },
+          { desc: "Sol. injetável 2 mg/mL", tipo: "solucao_inj", concentracao: 2 }
+        ],
+        doses: [
+          { label: "Náuseas / Vômitos (0,15 mg/kg/dose)", min: 0.15, max: 0.15, intervalo: "a cada 8h IV/VO", maxDose24h: 24, obs: "Máximo 8 mg por dose; adultos: 8 mg 3x/dia" }
+        ],
+        contraindicacoes: "QT prolongado congênito, hipersensibilidade, uso de apomorfina",
+        interacoes: "QT-prolongadores (amiodarona, haloperidol), tramadol (sínd. serotoninérgica)",
+        gestacao: "Cat. B — seguro; evitar no 1º trim. (hipospadias descrito)",
+        obs: "Monitorar ECG em pacientes com QT prolongado. Uso oral tão eficaz quanto IV para maioria das indicações."
+      },
+      {
+        nome: "Lactulose", dci: "Lactulose",
+        atc: "A06AD11", grupo: "Laxativo osmótico", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 667 mg/mL (xarope)", tipo: "solucao", concentracao: 667 }
+        ],
+        doses: [
+          { label: "Constipação (0,5–1 mL/kg/dia)", min: 333, max: 667, intervalo: "1–2x ao dia", maxDose24h: 60000, obs: "Lactentes: 2,5–5 mL/dia; crianças: 5–10 mL/dia; adultos: 15–45 mL/dia" }
+        ],
+        contraindicacoes: "Galactosemia, obstrução intestinal",
+        interacoes: "Antiácidos (não usar junto — reduz eficácia)",
+        gestacao: "Cat. B — seguro",
+        obs: "Flatulência e cólicas são frequentes no início. Encefalopatia hepática: dose maior (2–3x ao dia até 2–3 evacuações/dia)."
+      },
+      {
+        nome: "Sais de Reidratação Oral (SRO)", dci: "Sais de reidratação oral",
+        atc: "A07CA", grupo: "Reidratante oral (OMS hipoosmolar)", componente: "Básico",
+        formas: [
+          { desc: "Solução hipoosmolar 245 mOsm/L (1 sache em 200 mL de água)", tipo: "solucao", concentracao: 1 }
+        ],
+        doses: [
+          { label: "Desidratação leve (50 mL/kg em 4h)", min: 50, max: 50, intervalo: "oferecer lentamente em 4 horas", maxDose24h: 9999, obs: "Oferecer colher a colher; se vomitar aguardar 10 min e tentar novamente" },
+          { label: "Desidratação moderada (100 mL/kg em 4h)", min: 100, max: 100, intervalo: "oferecer em 4 horas + perdas contínuas", maxDose24h: 9999, obs: "Repor 10 mL/kg por cada episódio de diarreia adicional" }
+        ],
+        contraindicacoes: "Vômitos incoercíveis, íleo paralítico, choque hipovolêmico (requer acesso IV)",
+        interacoes: "Não significativas",
+        gestacao: "Seguro — indicado",
+        obs: "Concentração calculada em mL/kg de solução SRO. Sache OMS 2024: Na 75 mEq/L, K 20 mEq/L, Glicose 75 mmol/L, 245 mOsm/L."
+      }
+    ]
+  },
+
+  alergia: {
+    label: "Alergia", icon: "🤧", color: "#6b2d7c",
+    meds: [
+      {
+        nome: "Cetirizina", dci: "Cetirizina cloridrato",
+        atc: "R06AE07", grupo: "Anti-histamínico H1 2ª geração (não sedativo)", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 1 mg/mL", tipo: "solucao", concentracao: 1 },
+          { desc: "Comprimido 10 mg", tipo: "comprimido", concentracao: 10 }
+        ],
+        doses: [
+          { label: "Rinite / Urticária (0,25 mg/kg/dia)", min: 0.25, max: 0.25, intervalo: "1x ao dia à noite", maxDose24h: 10, obs: "6 meses–2 anos: 2,5 mg/dia; 2–6 anos: 2,5–5 mg/dia; > 6 anos: 10 mg/dia" }
+        ],
+        contraindicacoes: "Hipersensibilidade, IRC grave (ajustar dose), < 6 meses",
+        interacoes: "Álcool (sedação aditiva), depressores SNC (mínimo), ritonavir",
+        gestacao: "Cat. B — preferir loratadina",
+        obs: "Mínima sedação comparado a 1ª geração. Pode causar sedação em crianças pequenas. Dose única diária à noite."
+      },
+      {
+        nome: "Loratadina", dci: "Loratadina",
+        atc: "R06AX13", grupo: "Anti-histamínico H1 2ª geração (não sedativo)", componente: "Básico",
+        formas: [
+          { desc: "Xarope 1 mg/mL", tipo: "solucao", concentracao: 1 },
+          { desc: "Comprimido 10 mg", tipo: "comprimido", concentracao: 10 }
+        ],
+        doses: [
+          { label: "Rinite / Urticária (0,2 mg/kg/dia)", min: 0.2, max: 0.2, intervalo: "1x ao dia", maxDose24h: 10, obs: "< 30 kg: 5 mg/dia; ≥ 30 kg: 10 mg/dia" }
+        ],
+        contraindicacoes: "Hipersensibilidade, < 2 anos",
+        interacoes: "Mínimas; cetoconazol, eritromicina (aumentam nível plasmático)",
+        gestacao: "Cat. B — anti-histamínico de escolha na gestação",
+        obs: "Anti-histamínico de 1ª escolha na gestação. Não atravessa facilmente a BHE — sem sedação."
+      },
+      {
+        nome: "Difenidramina", dci: "Difenidramina cloridrato",
+        atc: "R06AA02", grupo: "Anti-histamínico H1 1ª geração (sedativo)", componente: "Básico",
+        formas: [
+          { desc: "Elixir 12,5 mg/5 mL", tipo: "solucao", concentracao: 2.5 },
+          { desc: "Comprimido 25 mg", tipo: "comprimido", concentracao: 25 },
+          { desc: "Sol. injetável 50 mg/mL", tipo: "solucao_inj", concentracao: 50 }
+        ],
+        doses: [
+          { label: "Alergia / Urticária (1 mg/kg/dose)", min: 1, max: 1.5, intervalo: "a cada 6h", maxDose24h: 300, obs: "Máximo 50 mg por dose; uso IM em anafilaxia" }
+        ],
+        contraindicacoes: "< 2 anos (risco de morte súbita), glaucoma, retenção urinária, IMAO",
+        interacoes: "IMAO (contraindicado), álcool, depressores SNC, anticolinérgicos",
+        gestacao: "Cat. B — usar com cautela, especialmente no 3º trim.",
+        obs: "⚠️ NÃO usar em < 2 anos. Sedação significativa — cuidado em condutores. Útil para reações alérgicas agudas IM."
+      },
+      {
+        nome: "Prednisona (Reação alérgica grave)", dci: "Prednisona",
+        atc: "H02AB07", grupo: "Corticoide sistêmico oral", componente: "Básico",
+        formas: [
+          { desc: "Comprimido 5 mg", tipo: "comprimido", concentracao: 5 },
+          { desc: "Comprimido 20 mg", tipo: "comprimido", concentracao: 20 }
+        ],
+        doses: [
+          { label: "Alergia moderada-grave (0,5–1 mg/kg/dia)", min: 0.5, max: 1, intervalo: "1–2x ao dia por 3–7 dias", maxDose24h: 60, obs: "Curtos cursos não requerem desmame" }
+        ],
+        contraindicacoes: "Infecções fúngicas sistêmicas, hipersensibilidade",
+        interacoes: "AINEs, insulina, rifampicina, vacinas vivas, antifúngicos",
+        gestacao: "Cat. C",
+        obs: "Em anafilaxia: usar epinefrina PRIMEIRO, depois corticoide. Tomar com alimentos."
+      },
+      {
+        nome: "Epinefrina (Adrenalina) — Anafilaxia", dci: "Epinefrina (adrenalina)",
+        atc: "R03AA01", grupo: "Simpaticomimérico — emergência anafilaxia", componente: "Hospitalar",
+        formas: [
+          { desc: "Sol. injetável 1 mg/mL (1:1.000)", tipo: "solucao_inj", concentracao: 1 },
+          { desc: "Autoinjector 0,15 mg (EpiPen Jr.)", tipo: "especial", concentracao: 0.15, unidade: "mg fixo" },
+          { desc: "Autoinjector 0,3 mg (EpiPen)", tipo: "especial", concentracao: 0.3, unidade: "mg fixo" }
+        ],
+        doses: [
+          { label: "Anafilaxia IM (0,01 mg/kg)", min: 0.01, max: 0.01, intervalo: "IM face anterolateral coxa; repetir a cada 5–15 min se necessário", maxDose24h: 1, obs: "Máximo 0,5 mg por dose; face anterolateral da coxa (IM)" }
+        ],
+        contraindicacoes: "Nenhuma contraindicação absoluta na anafilaxia",
+        interacoes: "Beta-bloqueadores (antagonismo), IMAO, antidepressivos tricíclicos",
+        gestacao: "Seguro na anafilaxia — risco de morte materno-fetal sem tratamento é maior",
+        obs: "⚠️ MEDICAMENTO DE EMERGÊNCIA. Primeira linha na anafilaxia. Sempre IM na coxa, NUNCA IV direta sem monitorização. Manter deitado com pernas elevadas."
+      }
+    ]
+  },
+
+  neurologia: {
+    label: "Neurologia", icon: "🧠", color: "#3a5c8b",
+    meds: [
+      {
+        nome: "Fenobarbital", dci: "Fenobarbital",
+        atc: "N03AA02", grupo: "Barbitúrico antiepiléptico", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 40 mg/mL", tipo: "solucao", concentracao: 40 },
+          { desc: "Comprimido 50 mg", tipo: "comprimido", concentracao: 50 },
+          { desc: "Comprimido 100 mg", tipo: "comprimido", concentracao: 100 },
+          { desc: "Sol. injetável 100 mg/mL", tipo: "solucao_inj", concentracao: 100 }
+        ],
+        doses: [
+          { label: "Status epilepticus - ataque (15–20 mg/kg IV)", min: 15, max: 20, intervalo: "dose de ataque IV (max 100 mg/min)", maxDose24h: 1000, obs: "Máx. 1g dose de ataque IV; monitorar respiração" },
+          { label: "Manutenção antiepiléptico (3–5 mg/kg/dia)", min: 3, max: 5, intervalo: "1–2x ao dia", maxDose24h: 300, obs: "Nível sérico: 15–40 mcg/mL; crianças podem precisar de dose/kg maior" }
+        ],
+        contraindicacoes: "Hipersensibilidade, porfiria, dependência a barbitúricos, depressão respiratória grave",
+        interacoes: "Indutor CYP450 — reduz: varfarina, ACO, corticosteroides, carbamazepina, fenitoína; álcool (sinergismo perigoso)",
+        gestacao: "Cat. D — malformações fetais; usar se único antiepiléptico eficaz",
+        obs: "Janela terapêutica: 15–40 mcg/mL. Receituário especial. Sedação importante — cautela em condutores."
+      },
+      {
+        nome: "Diazepam (Status / Convulsão febril)", dci: "Diazepam",
+        atc: "N05BA01", grupo: "Benzodiazepínico", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 2 mg/mL (gotas 5 mg/mL)", tipo: "solucao", concentracao: 2 },
+          { desc: "Sol. injetável 5 mg/mL", tipo: "solucao_inj", concentracao: 5 },
+          { desc: "Solução retal 5 mg/mL", tipo: "solucao", concentracao: 5 },
+          { desc: "Comprimido 5 mg", tipo: "comprimido", concentracao: 5 },
+          { desc: "Comprimido 10 mg", tipo: "comprimido", concentracao: 10 }
+        ],
+        doses: [
+          { label: "Status epilepticus IV (0,2–0,5 mg/kg)", min: 0.2, max: 0.5, intervalo: "IV lento; repetir 1x após 5 min se necessário", maxDose24h: 30, obs: "Máx. 5 mg < 5 anos; 10 mg > 5 anos; IV: 1 mg/min" },
+          { label: "Retal (0,5 mg/kg)", min: 0.5, max: 0.5, intervalo: "dose única retal", maxDose24h: 20, obs: "Alternativa quando sem acesso IV" }
+        ],
+        contraindicacoes: "Depressão respiratória grave, miastenia gravis, hipersensibilidade, apneia do sono",
+        interacoes: "Opioides (depressão respiratória grave), álcool, barbitúricos, antidepressivos",
+        gestacao: "Cat. D — risco de fenda palatina e abstinência neonatal",
+        obs: "Antídoto: Flumazenil 0,01 mg/kg IV. Receituário especial. Ter suporte respiratório disponível antes de usar IV."
+      },
+      {
+        nome: "Valproato de Sódio", dci: "Ácido valproico / Valproato de sódio",
+        atc: "N03AG01", grupo: "Antiepiléptico / Estabilizador de humor", componente: "Básico",
+        formas: [
+          { desc: "Xarope 50 mg/mL", tipo: "solucao", concentracao: 50 },
+          { desc: "Comprimido 250 mg", tipo: "comprimido", concentracao: 250 },
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 },
+          { desc: "Sol. injetável 100 mg/mL", tipo: "solucao_inj", concentracao: 100 }
+        ],
+        doses: [
+          { label: "Epilepsia (15–30 mg/kg/dia)", min: 15, max: 30, intervalo: "dividido a cada 8–12h; iniciar com 10–15 mg/kg/dia", maxDose24h: 2500, obs: "Nível sérico: 50–100 mcg/mL; aumentar 5–10 mg/kg/sem" }
+        ],
+        contraindicacoes: "Hepatopatia, pancreatite, porfiria, < 2 anos (risco hepatotoxicidade), gestação (teratogênico)",
+        interacoes: "Fenitoína, carbamazepina, fenobarbital (interações complexas); aspirina (deslocamento proteico)",
+        gestacao: "Cat. X — espinha bífida (1–2%), QI reduzido no filho. EVITAR. Alternativa: lamotrigina",
+        obs: "⚠️ TERATOGÊNICO: espinha bífida e neurotoxicidade fetal. Mulheres em idade fértil: anticoncepção obrigatória. Monitorar TFH, amilase."
+      },
+      {
+        nome: "Carbamazepina", dci: "Carbamazepina",
+        atc: "N03AF01", grupo: "Antiepiléptico dibenzazepínico", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 100 mg/5 mL", tipo: "solucao", concentracao: 20 },
+          { desc: "Comprimido 200 mg", tipo: "comprimido", concentracao: 200 },
+          { desc: "Comprimido 400 mg", tipo: "comprimido", concentracao: 400 }
+        ],
+        doses: [
+          { label: "Epilepsia (10–20 mg/kg/dia)", min: 10, max: 20, intervalo: "dividido a cada 8–12h; iniciar com 5 mg/kg/dia", maxDose24h: 1200, obs: "Nível sérico: 4–12 mcg/mL; titular lentamente" }
+        ],
+        contraindicacoes: "Bloqueio AV, aplasia medular, uso de IMAO, hipersensibilidade",
+        interacoes: "Indutor potente CYP3A4 — reduz: ACO, varfarina, valproato, estatinas, antirretrovirais",
+        gestacao: "Cat. D — espinha bífida (0,5–1%), malformações faciais. Suplementar folato.",
+        obs: "Risco de SJS/TEN (testar HLA-B*1502 em asiáticos antes de iniciar). Monitorar Na+ (hiponatremia). Nível: 4–12 mcg/mL."
+      },
+      {
+        nome: "Levetiracetam", dci: "Levetiracetam",
+        atc: "N03AX14", grupo: "Antiepiléptico (novas gerações)", componente: "Especializado",
+        formas: [
+          { desc: "Solução oral 100 mg/mL", tipo: "solucao", concentracao: 100 },
+          { desc: "Comprimido 250 mg", tipo: "comprimido", concentracao: 250 },
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 },
+          { desc: "Sol. injetável 100 mg/mL", tipo: "solucao_inj", concentracao: 100 }
+        ],
+        doses: [
+          { label: "Epilepsia (20–60 mg/kg/dia)", min: 20, max: 60, intervalo: "dividido a cada 12h; iniciar com 20 mg/kg/dia", maxDose24h: 3000, obs: "Aumentar 20 mg/kg/dia a cada 2 semanas conforme necessário" }
+        ],
+        contraindicacoes: "Hipersensibilidade, IRC grave (ajustar dose pela TFG)",
+        interacoes: "Poucas interações — não induz/inibe CYP; carbamazepina (reduz nível de levetiracetam)",
+        gestacao: "Cat. C — dados de segurança limitados; usar se necessário",
+        obs: "Pouquíssimas interações farmacológicas (não é indutor/inibidor CYP). Irritabilidade e alterações de humor são efeitos adversos comuns — informar família."
+      }
+    ]
+  },
+
+  cardiovascular: {
+    label: "Cardiovascular", icon: "❤️", color: "#8b2d4a",
+    meds: [
+      {
+        nome: "Enalapril", dci: "Enalapril maleato",
+        atc: "C09AA02", grupo: "IECA", componente: "Básico",
+        formas: [
+          { desc: "Comprimido 5 mg", tipo: "comprimido", concentracao: 5 },
+          { desc: "Comprimido 10 mg", tipo: "comprimido", concentracao: 10 },
+          { desc: "Comprimido 20 mg", tipo: "comprimido", concentracao: 20 },
+          { desc: "Solução oral 1 mg/mL (manipulado ped.)", tipo: "solucao", concentracao: 1 }
+        ],
+        doses: [
+          { label: "HAS / IC pediátrica (0,1 mg/kg/dia)", min: 0.1, max: 0.5, intervalo: "dividido a cada 12h; iniciar com 0,1 mg/kg/dia", maxDose24h: 40, obs: "Adultos: 5–40 mg/dia em 1–2 tomadas" }
+        ],
+        contraindicacoes: "Gestação, estenose bilateral de artérias renais, angioedema por IECA prévio, hipercalemia",
+        interacoes: "AINEs (reduz efeito + nefrotoxicidade), K+, espironolactona, lítio, diuréticos",
+        gestacao: "Cat. D — fetotoxicidade grave; CONTRAINDICADO",
+        obs: "Tosse seca em 5–20% (mecanismo: bradicinina). Monitorar K+ e creatinina após início e ajustes de dose."
+      },
+      {
+        nome: "Propranolol", dci: "Propranolol cloridrato",
+        atc: "C07AA05", grupo: "Beta-bloqueador não seletivo", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 1 mg/mL (manipulado ped.)", tipo: "solucao", concentracao: 1 },
+          { desc: "Comprimido 10 mg", tipo: "comprimido", concentracao: 10 },
+          { desc: "Comprimido 40 mg", tipo: "comprimido", concentracao: 40 },
+          { desc: "Sol. injetável 1 mg/mL", tipo: "solucao_inj", concentracao: 1 }
+        ],
+        doses: [
+          { label: "HAS / Arritmia ped. (0,5–1 mg/kg/dia)", min: 0.5, max: 1, intervalo: "dividido a cada 6–8h", maxDose24h: 320, obs: "HAS pediátrica: 1–5 mg/kg/dia em 2–3 tomadas" },
+          { label: "Hemangioma infantil (2–3 mg/kg/dia)", min: 2, max: 3, intervalo: "dividido a cada 12h", maxDose24h: 120, obs: "Monitorar FC e glicemia; jejum < 2h" }
+        ],
+        contraindicacoes: "Asma, DPOC grave, bloqueio AV 2º/3º grau, bradicardia grave, choque cardiogênico",
+        interacoes: "Verapamil/diltiazem (bloqueio AV), insulina (masca hipoglicemia), AINEs, clonidina",
+        gestacao: "Cat. C — risco de RCIU, bradicardia e hipoglicemia neonatal",
+        obs: "Não suspender abruptamente (risco de angina rebote). Masca sintomas de hipoglicemia. Broncoespasmo: evitar em asmáticos."
+      },
+      {
+        nome: "Furosemida", dci: "Furosemida",
+        atc: "C03CA01", grupo: "Diurético de alça", componente: "Básico",
+        formas: [
+          { desc: "Solução oral 10 mg/mL", tipo: "solucao", concentracao: 10 },
+          { desc: "Comprimido 40 mg", tipo: "comprimido", concentracao: 40 },
+          { desc: "Sol. injetável 10 mg/mL", tipo: "solucao_inj", concentracao: 10 }
+        ],
+        doses: [
+          { label: "IC / Edema (1–2 mg/kg/dose)", min: 1, max: 2, intervalo: "a cada 6–12h IV/VO", maxDose24h: 600, obs: "Adultos: 40–80 mg/dia VO; IV: 20–40 mg lento" }
+        ],
+        contraindicacoes: "Anúria, hipersensibilidade a sulfonamidas, hiponatremia/hipocalemia graves",
+        interacoes: "Aminoglicosídeos (ototoxicidade), digoxina (hipocalemia), AINEs (reduz efeito), lítio",
+        gestacao: "Cat. C — usar apenas se necessário",
+        obs: "Monitorar K+, Na+, creatinina. Risco de ototoxicidade em doses altas IV ou combinadas com aminoglicosídeos."
+      },
+      {
+        nome: "Digoxina", dci: "Digoxina",
+        atc: "C01AA05", grupo: "Glicosídeo cardíaco", componente: "Básico/Hospitalar",
+        formas: [
+          { desc: "Elixir 50 mcg/mL (0,05 mg/mL)", tipo: "solucao", concentracao: 0.05 },
+          { desc: "Comprimido 0,25 mg", tipo: "comprimido", concentracao: 0.25 },
+          { desc: "Sol. injetável 0,25 mg/mL", tipo: "solucao_inj", concentracao: 0.25 }
+        ],
+        doses: [
+          { label: "Digitalização oral (crianças 10–15 mcg/kg/dia total)", min: 0.01, max: 0.015, intervalo: "1/2 dose ataque → 1/4 após 8h → 1/4 após mais 8h", maxDose24h: 1.5, obs: "Manutenção: 25–35% dose digital/dia dividido a cada 12h" },
+          { label: "Manutenção (5–10 mcg/kg/dia)", min: 0.005, max: 0.01, intervalo: "dividido a cada 12h VO", maxDose24h: 0.5, obs: "Adultos manutenção: 0,125–0,25 mg/dia; nível alvo IC: 0,5–0,9 ng/mL" }
+        ],
+        contraindicacoes: "Bloqueio AV 2º/3º grau sem marcapasso, FA com via acessória, FV, intoxicação digitálica",
+        interacoes: "Amiodarona, verapamil (aumentam nível), hipocalemia/hipomagnesemia (potencializam toxicidade), eritromicina",
+        gestacao: "Cat. C — usar se necessário (IC grave, FA)",
+        obs: "⚠️ Janela terapêutica estreita. Nível tóxico > 2 ng/mL. Antídoto: anticorpos antidigoxina (Fab). Calcule sempre com precisão."
+      },
+      {
+        nome: "Captopril", dci: "Captopril",
+        atc: "C09AA01", grupo: "IECA de curta ação", componente: "Básico",
+        formas: [
+          { desc: "Comprimido 12,5 mg", tipo: "comprimido", concentracao: 12.5 },
+          { desc: "Comprimido 25 mg", tipo: "comprimido", concentracao: 25 },
+          { desc: "Comprimido 50 mg", tipo: "comprimido", concentracao: 50 },
+          { desc: "Solução oral 1 mg/mL (manipulado)", tipo: "solucao", concentracao: 1 }
+        ],
+        doses: [
+          { label: "HAS pediátrica (0,1–0,5 mg/kg/dose)", min: 0.1, max: 0.5, intervalo: "a cada 8h", maxDose24h: 450, obs: "Neonatos: 0,01–0,1 mg/kg/dose; titular cuidadosamente" }
+        ],
+        contraindicacoes: "Gestação, angioedema por IECA, estenose bilateral artérias renais, hipercalemia",
+        interacoes: "AINEs, K+, poupadores de K+, lítio, diuréticos",
+        gestacao: "Cat. D — CONTRAINDICADO",
+        obs: "Útil em emergências hipertensivas (ação mais rápida que enalapril). Tomar em jejum (absorção reduzida com alimentos). Tosse seca frequente."
+      }
+    ]
+  },
+
+  dermatologia: {
+    label: "Dermatologia", icon: "🧴", color: "#4a7c5c",
+    meds: [
+      {
+        nome: "Cetoconazol (tópico/oral)", dci: "Cetoconazol",
+        atc: "D01AC08", grupo: "Antifúngico azólico", componente: "Básico",
+        formas: [
+          { desc: "Creme 2% — uso tópico (não calculado por peso)", tipo: "especial", concentracao: 0, unidade: "aplicação tópica" },
+          { desc: "Xampu 2% — tópico capilar", tipo: "especial", concentracao: 0, unidade: "aplicação tópica" },
+          { desc: "Comprimido 200 mg (sistêmico)", tipo: "comprimido", concentracao: 200 }
+        ],
+        doses: [
+          { label: "Oral sistêmico (3,3–6,6 mg/kg/dia)", min: 3.3, max: 6.6, intervalo: "1–2x ao dia com refeição", maxDose24h: 400, obs: "Adultos: 200–400 mg/dia VO. Tópico: aplicar 1–2x/dia" }
+        ],
+        contraindicacoes: "Hepatopatia grave, uso com cisaprida/terfenadina/astemizol/pimozida, insuf. adrenal (relativo)",
+        interacoes: "Inibidor potente CYP3A4 — aumenta: estatinas, ciclosporina, midazolam, varfarina, cisaprida (contraindicado)",
+        gestacao: "Cat. C — tópico preferível ao sistêmico",
+        obs: "Via oral: usar apenas quando tópico não é viável (hepatotoxicidade). Tópico: eficaz para tinea, pitiriase versicolor, dermatite seborreica."
+      },
+      {
+        nome: "Permetrina (escabiose / pediculose)", dci: "Permetrina",
+        atc: "P03AC04", grupo: "Ectoparasiticida tópico", componente: "Básico",
+        formas: [
+          { desc: "Creme 5% — escabiose", tipo: "especial", concentracao: 0, unidade: "aplicação corporal completa" },
+          { desc: "Loção/creme 1% — pediculose", tipo: "especial", concentracao: 0, unidade: "aplicação capilar" }
+        ],
+        doses: [
+          { label: "Tópico — sem cálculo por peso", min: 0, max: 0, intervalo: "Escabiose: aplicar no corpo todo (pescoço até pés), lavar após 8–12h. Repetir em 7–14 dias.", maxDose24h: 9999, obs: "Pediculose: aplicar nos cabelos úmidos, lavar após 10 min; repetir em 7 dias" }
+        ],
+        contraindicacoes: "< 2 meses de vida, hipersensibilidade a piretrinas, crisântemos",
+        interacoes: "Nenhuma sistêmica relevante",
+        gestacao: "Cat. B — seguro; preferível ao BHC (lindano)",
+        obs: "Lavar todas as roupas, lençóis e toalhas (60°C). Tratar contatos domiciliares simultaneamente. Prurido pode persistir 2–4 semanas após tratamento (não indica falha)."
+      },
+      {
+        nome: "Hidrocortisona (tópica)", dci: "Hidrocortisona",
+        atc: "D07AA02", grupo: "Corticoide tópico (potência baixa)", componente: "Básico",
+        formas: [
+          { desc: "Creme/pomada 1% — uso tópico", tipo: "especial", concentracao: 0, unidade: "aplicação tópica" }
+        ],
+        doses: [
+          { label: "Tópico — sem cálculo por peso", min: 0, max: 0, intervalo: "Aplicar fina camada na área afetada 2–3x ao dia por até 7 dias (face) / 2 semanas (corpo)", maxDose24h: 9999, obs: "" }
+        ],
+        contraindicacoes: "Infecções cutâneas (fúngicas, bacterianas, virais) sem tratamento, rosácea, dermatite perioral",
+        interacoes: "Não significativas topicamente",
+        gestacao: "Cat. C — evitar grandes áreas e uso prolongado",
+        obs: "NÃO usar na face por mais de 7 dias. NÃO usar em fraldas ou áreas ocluídas de forma prolongada (absorção aumentada em crianças). Potência baixa — seguro para face."
+      },
+      {
+        nome: "Fluconazol (onicomicose / candidíase)", dci: "Fluconazol",
+        atc: "J02AC01", grupo: "Antifúngico triazólico sistêmico", componente: "Básico",
+        formas: [
+          { desc: "Cápsula/Comprimido 150 mg", tipo: "comprimido", concentracao: 150 },
+          { desc: "Suspensão oral 10 mg/mL", tipo: "solucao", concentracao: 10 },
+          { desc: "Sol. injetável 2 mg/mL", tipo: "solucao_inj", concentracao: 2 }
+        ],
+        doses: [
+          { label: "Candidíase oral/cutânea (3–6 mg/kg/dia)", min: 3, max: 6, intervalo: "1x ao dia por 7–14 dias", maxDose24h: 400, obs: "Candidíase vaginal: 150 mg dose única; Onicomicose: 150–300 mg/semana por 3–6 meses" }
+        ],
+        contraindicacoes: "QT prolongado, uso com cisaprida/terfenadina, hipersensibilidade, gestação (> 150 mg)",
+        interacoes: "Varfarina (↑INR), estatinas (rabdomiólise), tacrolimus, QT-prolongadores, rifampicina (↓fluconazol)",
+        gestacao: "Cat. C (dose única 150 mg) / Cat. D (doses repetidas/altas)",
+        obs: "Candidíase vaginal: 150 mg dose única VO é tão eficaz quanto tópico. Monitorar função hepática em uso prolongado."
+      },
+      {
+        nome: "Benzoíla peróxido / Adapaleno (acne)", dci: "Peróxido de benzoíla / Adapaleno",
+        atc: "D10AX", grupo: "Antiacneico tópico", componente: "Básico",
+        formas: [
+          { desc: "Gel benzoíla peróxido 2,5–10% — tópico", tipo: "especial", concentracao: 0, unidade: "aplicação tópica" },
+          { desc: "Creme/gel adapaleno 0,1% — tópico", tipo: "especial", concentracao: 0, unidade: "aplicação tópica" }
+        ],
+        doses: [
+          { label: "Tópico — sem cálculo por peso", min: 0, max: 0, intervalo: "Aplicar fina camada nas áreas afetadas 1x ao dia à noite após limpeza", maxDose24h: 9999, obs: "Iniciar com benzoíla 2,5% e aumentar; adapaleno usar à noite com protetor solar diurno" }
+        ],
+        contraindicacoes: "Hipersensibilidade, pele muito irritada ou lesionada; adapaleno contraindicado na gestação",
+        interacoes: "Benzoíla peróxido pode inativar adapaleno se usados simultaneamente — usar em horários diferentes",
+        gestacao: "Cat. C (benzoíla) / Cat. C (adapaleno) — evitar adapaleno",
+        obs: "Eritema e descamação são normais nas primeiras 2 semanas. Usar protetor solar FPS ≥ 30 com adapaleno (retinoides = fotossensibilidade)."
+      }
+    ]
+  },
+
+  hormonios: {
+    label: "Hormônios", icon: "⚗️", color: "#7c5c2d",
+    meds: [
+      {
+        nome: "Levotiroxina (T4)", dci: "Levotiroxina sódica",
+        atc: "H03AA01", grupo: "Hormônio tireoidiano", componente: "Básico",
+        formas: [
+          { desc: "Comprimido 25 mcg", tipo: "comprimido", concentracao: 0.025 },
+          { desc: "Comprimido 50 mcg", tipo: "comprimido", concentracao: 0.05 },
+          { desc: "Comprimido 100 mcg", tipo: "comprimido", concentracao: 0.1 }
+        ],
+        doses: [
+          { label: "Hipotireoidismo congênito (10–15 mcg/kg/dia)", min: 0.01, max: 0.015, intervalo: "1x ao dia em jejum", maxDose24h: 0.3, obs: "Neonatos: 10–15 mcg/kg; lactentes 3–6m: 8–10 mcg/kg; > 12 anos: 1,6 mcg/kg; adulto: 1,6 mcg/kg" }
+        ],
+        contraindicacoes: "Hipertireoidismo não tratado, infarto agudo não compensado, tirotoxicose",
+        interacoes: "Fe, Ca++, antiácidos (reduzem absorção — intervalo 4h); varfarina, digoxina, insulina",
+        gestacao: "Cat. A — hipotireoidismo na gestação DEVE ser tratado",
+        obs: "Tomar em jejum, 30–60 min antes do café (Fe e Ca reduzem absorção). Dose calculada em mg/kg/dia (concentrações em mg). Monitorar TSH 6–8 semanas após ajuste."
+      },
+      {
+        nome: "Insulina Regular", dci: "Insulina humana regular",
+        atc: "A10AB01", grupo: "Insulina de ação rápida", componente: "Básico",
+        formas: [
+          { desc: "Sol. injetável 100 UI/mL (frasco)", tipo: "solucao_inj", concentracao: 100 }
+        ],
+        doses: [
+          { label: "DM1 prandial (0,1–0,2 UI/kg/refeição)", min: 0.1, max: 0.2, intervalo: "15–30 min antes das refeições SC", maxDose24h: 100, obs: "Dose individualizada; monitorar glicemia pré e pós-prandial" },
+          { label: "Cetoacidose diabética - CAD (0,1 UI/kg/h IV)", min: 0.1, max: 0.1, intervalo: "infusão contínua IV — CAD", maxDose24h: 999, obs: "CAD: 0,1 UI/kg/h; iniciar insulina somente após K+ > 3,5 mEq/L" }
+        ],
+        contraindicacoes: "Hipoglicemia",
+        interacoes: "Beta-bloqueadores (mascam sintomas hipoglicemia), corticosteroides, diuréticos tiazídicos (↑glicemia)",
+        gestacao: "Cat. B — insulina é o hipoglicemiante de escolha na gestação",
+        obs: "⚠️ SEMPRE ter glicose IV disponível. Calcule: UI/kg × peso = UI por dose. CAD: iniciar após potássio > 3,5 mEq/L."
+      },
+      {
+        nome: "Insulina NPH", dci: "Insulina isofana humana (NPH)",
+        atc: "A10AC01", grupo: "Insulina de ação intermediária", componente: "Básico",
+        formas: [
+          { desc: "Suspensão injetável 100 UI/mL (SC)", tipo: "solucao_inj", concentracao: 100 }
+        ],
+        doses: [
+          { label: "DM1/DM2 basal (0,3–0,5 UI/kg/dia)", min: 0.3, max: 0.5, intervalo: "1–2x ao dia SC; geralmente manhã e antes de dormir", maxDose24h: 999, obs: "Ajustar conforme glicemia de jejum; iniciar com dose menor em DM2" }
+        ],
+        contraindicacoes: "Hipoglicemia, não administrar IV",
+        interacoes: "Corticosteroides, tiazídicos (↑glicemia); IMAO, propranolol (↑hipoglicemia)",
+        gestacao: "Cat. B — seguro; controle rigoroso durante gestação",
+        obs: "Homogeneizar (rolar 10x) antes de aplicar — NÃO agitar. Armazenar em geladeira (4°C) — após abertura: 30 dias em temperatura ambiente. Pico: 4–10h; duração: 10–18h."
+      },
+      {
+        nome: "Metformina", dci: "Metformina cloridrato",
+        atc: "A10BA02", grupo: "Biguanida / Antidiabético oral", componente: "Básico",
+        formas: [
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 },
+          { desc: "Comprimido 850 mg", tipo: "comprimido", concentracao: 850 },
+          { desc: "Comprimido 1000 mg", tipo: "comprimido", concentracao: 1000 }
+        ],
+        doses: [
+          { label: "DM2 / Resistência insulínica (10 mg/kg/dose)", min: 10, max: 20, intervalo: "2–3x ao dia com refeições; iniciar com 500 mg 1–2x/dia", maxDose24h: 2550, obs: "Adultos: 500–2550 mg/dia; adolescentes DM2: até 2000 mg/dia" }
+        ],
+        contraindicacoes: "TFG < 30 mL/min, hepatopatia grave, alcoolismo, IRC, acidose lática histórica",
+        interacoes: "Contraste iodado (suspender 48h antes), álcool, furosemida, cimetidina",
+        gestacao: "Cat. B — pode usar, porém insulina é preferida para controle ideal",
+        obs: "Suspender 48h antes de cirurgias e exames com contraste iodado. Não causa hipoglicemia em monoterapia. Iniciar com dose baixa e aumentar progressivamente para reduzir distúrbios GI."
+      },
+      {
+        nome: "Dexametasona", dci: "Dexametasona",
+        atc: "H02AB02", grupo: "Corticoide sistêmico potente", componente: "Básico/Hospitalar",
+        formas: [
+          { desc: "Solução oral 0,1 mg/mL (elixir)", tipo: "solucao", concentracao: 0.1 },
+          { desc: "Comprimido 0,5 mg", tipo: "comprimido", concentracao: 0.5 },
+          { desc: "Sol. injetável 4 mg/mL", tipo: "solucao_inj", concentracao: 4 },
+          { desc: "Sol. injetável 10 mg/mL", tipo: "solucao_inj", concentracao: 10 }
+        ],
+        doses: [
+          { label: "Laringite / Crupe (0,15–0,6 mg/kg)", min: 0.15, max: 0.6, intervalo: "dose única VO/IM", maxDose24h: 16, obs: "Crupe: dose única oral tão eficaz quanto IM; dose usual 0,15–0,3 mg/kg" },
+          { label: "Anti-inflamatório / Edema cerebral (0,5–1 mg/kg/dia)", min: 0.5, max: 1, intervalo: "dividido a cada 6h IV/IM", maxDose24h: 40, obs: "Máximo 40 mg/dia; desmame progressivo em uso > 5 dias" }
+        ],
+        contraindicacoes: "Infecções fúngicas sistêmicas, hipersensibilidade, varicela/herpes ativa (relativo)",
+        interacoes: "AINEs (ulcerogenicidade), insulina, rifampicina (indução CYP), vacinas vivas",
+        gestacao: "Cat. C — maturação pulmonar fetal: 12 mg/6h IM × 2 doses (24–34 semanas)",
+        obs: "Potência = 6× prednisona. Crupe: 0,15 mg/kg oral (mínimo 0,6 mg) é o padrão ouro. Sem necessidade de jejum para via VO."
+      }
+    ]
+  },
+
+  antiparasitario: {
+    label: "Antiparasitário", icon: "🔬", color: "#3d5a2a",
+    meds: [
+      {
+        nome: "Albendazol", dci: "Albendazol",
+        atc: "P02CA03", grupo: "Anti-helmíntico benzimidazólico", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 400 mg/10 mL (40 mg/mL)", tipo: "solucao", concentracao: 40 },
+          { desc: "Comprimido mastigável 400 mg", tipo: "comprimido", concentracao: 400 }
+        ],
+        doses: [
+          { label: "Helmintos intestinais: áscaris, ancilostomídeos, oxiúros (400 mg dose única)", min: 400, max: 400, intervalo: "dose única; repetir em 2 semanas para oxiúros (reinfecção)", maxDose24h: 400, obs: "< 2 anos: 200 mg dose única; ≥ 2 anos: 400 mg dose única — DOSE FIXA independente do peso" },
+          { label: "Giardíase (15 mg/kg/dia por 5–7 dias)", min: 15, max: 15, intervalo: "1x ao dia com refeição por 5–7 dias", maxDose24h: 400, obs: "" }
+        ],
+        contraindicacoes: "< 1 ano, hipersensibilidade a benzimidazóis, gestação (1º trimestre)",
+        interacoes: "Praziquantel, dexametasona, cimetidina (aumentam nível), rifampicina (reduz)",
+        gestacao: "Cat. C — contraindicado no 1º trimestre; evitar durante toda gestação",
+        obs: "Tomar com refeição gordurosa (aumenta absorção para infecções sistêmicas). Tratar contatos domiciliares simultaneamente (reinfecção)."
+      },
+      {
+        nome: "Ivermectina", dci: "Ivermectina",
+        atc: "P02CF01", grupo: "Anti-helmíntico / Ectoparasiticida", componente: "Básico",
+        formas: [
+          { desc: "Comprimido 6 mg", tipo: "comprimido", concentracao: 6 }
+        ],
+        doses: [
+          { label: "Escabiose / Estrongiloidíase (200 mcg/kg = 0,2 mg/kg)", min: 0.2, max: 0.2, intervalo: "dose única em jejum; repetir em 7–14 dias (escabiose)", maxDose24h: 24, obs: "≥ 15 kg — não usar em < 15 kg. Escabiose: 2 doses (dia 1 e dia 14)" }
+        ],
+        contraindicacoes: "< 15 kg ou < 5 anos, gestação, lactação no 1º mês",
+        interacoes: "Varfarina (↑INR), barbitúricos, benzodiazepínicos, valproato",
+        gestacao: "Cat. C — dados limitados; preferir permetrina tópica na gestação",
+        obs: "Dose em mg/kg → 0,2 mg/kg (200 mcg/kg). 6 mg comp: 15–25 kg: 1 comp; 25–35 kg: 1,5 comp; 35–50 kg: 2 comp; 50–65 kg: 2,5; 65–80 kg: 3; > 80 kg: 4 comp."
+      },
+      {
+        nome: "Metronidazol (antiparasitário)", dci: "Metronidazol",
+        atc: "P01AB01", grupo: "Antiprotozoário nitroimidazólico", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 40 mg/mL", tipo: "solucao", concentracao: 40 },
+          { desc: "Comprimido 250 mg", tipo: "comprimido", concentracao: 250 },
+          { desc: "Comprimido 400 mg", tipo: "comprimido", concentracao: 400 }
+        ],
+        doses: [
+          { label: "Giardíase (15–25 mg/kg/dia)", min: 15, max: 25, intervalo: "dividido a cada 8h por 5–7 dias", maxDose24h: 2000, obs: "Dose por adm.: total/3; adultos: 250–500 mg 3x/dia por 7 dias" },
+          { label: "Amebíase intestinal (30–50 mg/kg/dia)", min: 30, max: 50, intervalo: "dividido a cada 8h por 10 dias", maxDose24h: 2400, obs: "Amebíase hepática: 35–50 mg/kg/dia" }
+        ],
+        contraindicacoes: "1º trimestre gestação, hipersensibilidade a nitroimidazóis",
+        interacoes: "Álcool (reação tipo dissulfiram), varfarina, fenitoína, cimetidina",
+        gestacao: "Cat. B (2º/3º trim.) — evitar no 1º trimestre",
+        obs: "Evitar álcool durante e por 48h após o tratamento. Gosto metálico é efeito adverso frequente."
+      },
+      {
+        nome: "Nitazoxanida", dci: "Nitazoxanida",
+        atc: "P01AX12", grupo: "Antiprotozoário de amplo espectro", componente: "Básico",
+        formas: [
+          { desc: "Suspensão oral 100 mg/5 mL", tipo: "solucao", concentracao: 20 },
+          { desc: "Comprimido 500 mg", tipo: "comprimido", concentracao: 500 }
+        ],
+        doses: [
+          { label: "Giardíase / Criptosporidiose (7,5 mg/kg/dose)", min: 7.5, max: 7.5, intervalo: "a cada 12h por 3 dias com refeição", maxDose24h: 1000, obs: "1–3 anos: 100 mg/12h; 4–11 anos: 200 mg/12h; ≥ 12 anos: 500 mg/12h — DOSES FIXAS por faixa" }
+        ],
+        contraindicacoes: "Hipersensibilidade, disfunção hepática/renal grave",
+        interacoes: "Alta ligação proteica — pode interagir com warfarina e outros medicamentos com alta ligação",
+        gestacao: "Cat. B — dados limitados",
+        obs: "Primeira linha para criptosporidiose em imunocomprometidos. Urina pode ficar amarelada. Tomar sempre com alimentos."
+      },
+      {
+        nome: "Praziquantel", dci: "Praziquantel",
+        atc: "P02BA01", grupo: "Anti-helmíntico (cestódeos/trematódeos)", componente: "Básico/Estratégico",
+        formas: [
+          { desc: "Comprimido 600 mg", tipo: "comprimido", concentracao: 600 }
+        ],
+        doses: [
+          { label: "Esquistossomose (60 mg/kg/dia)", min: 60, max: 60, intervalo: "dividido em 2–3 doses no mesmo dia", maxDose24h: 6000, obs: "Dose total no mesmo dia; tomar com refeição" },
+          { label: "Teníase (10–20 mg/kg)", min: 10, max: 20, intervalo: "dose única", maxDose24h: 2400, obs: "Neurocisticercose: 50 mg/kg/dia × 15 dias (com corticoide)" }
+        ],
+        contraindicacoes: "Cisticercose ocular (risco de cegueira), hipersensibilidade, < 4 anos",
+        interacoes: "Carbamazepina / fenitoína (reduzem nível — dobrar dose), dexametasona, rifampicina",
+        gestacao: "Cat. B — usar se necessário",
+        obs: "Esquistossomose: dose única 60 mg/kg. ⚠️ Cisticercose ocular é CONTRAINDICAÇÃO — fazer fundo de olho antes de tratar neurocisticercose. Comprimido pode ser partido."
+      }
+    ]
+  }
+};
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let activeCat = 'analgesia';
+let activeMed = null;
+let selectedDoseIdx = 0;
+let selectedFormaIdx = 0;
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+function init() {
+  renderTabs();
+  renderMedList();
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('catTabs');
+  tabs.innerHTML = '';
+  Object.entries(DB).forEach(([key, cat]) => {
+    const t = document.createElement('div');
+    t.className = 'cat-tab' + (key === activeCat ? ' active' : '');
+    t.innerHTML = `${cat.icon} ${cat.label}`;
+    t.onclick = () => selectCat(key);
+    tabs.appendChild(t);
+  });
+}
+
+function selectCat(key) {
+  activeCat = key;
+  activeMed = null;
+  renderTabs();
+  renderMedList();
+  document.getElementById('mainContent').innerHTML = `
+    <div class="welcome-state">
+      <div style="font-size:48px;margin-bottom:16px">${DB[key].icon}</div>
+      <h2>${DB[key].label}</h2>
+      <p>Selecione um medicamento na lista lateral para ver a ficha completa e calcular a dose por peso.</p>
+    </div>`;
+}
+
+function renderMedList(filter = '') {
+  const list = document.getElementById('medList');
+  const cat = DB[activeCat];
+  list.innerHTML = '';
+  const meds = filter
+    ? Object.values(DB).flatMap(c => c.meds.filter(m => m.nome.toLowerCase().includes(filter.toLowerCase()) || m.dci.toLowerCase().includes(filter.toLowerCase())).map(m => ({...m, _cat: c})))
+    : cat.meds.map(m => ({...m, _cat: cat}));
+
+  if (meds.length === 0) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Nenhum resultado encontrado</div>';
+    return;
+  }
+
+  meds.forEach(med => {
+    const el = document.createElement('div');
+    el.className = 'med-item' + (activeMed && activeMed.nome === med.nome ? ' active' : '');
+    el.innerHTML = `<div class="med-item-name">${med.nome}</div><div class="med-item-sub">${med.dci} · ${med.grupo}</div>`;
+    el.onclick = () => {
+      activeMed = med;
+      selectedDoseIdx = 0;
+      selectedFormaIdx = 0;
+      document.querySelectorAll('.med-item').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      renderMedDetail(med);
+    };
+    list.appendChild(el);
+  });
+}
+
+function filterMeds(val) {
+  renderMedList(val.trim());
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER MED DETAIL
+// ═══════════════════════════════════════════════
+function renderMedDetail(med) {
+  const catKey = Object.entries(DB).find(([k,c]) => c.meds.some(m => m.nome === med.nome))?.[0] || activeCat;
+  const cat = DB[catKey];
+
+  const doseOptions = med.doses.map((d, i) => `<span class="dose-chip${i===0?' selected':''}" onclick="selectDose(${i}, this)">${d.label.split('(')[1]?.replace(')','') || d.label}</span>`).join('');
+  const formaOptions = med.formas.map((f, i) => `<option value="${i}">${f.desc}</option>`).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <!-- MED HEADER -->
+    <div class="med-card">
+      <div class="card-top">
+        <div class="card-icon" style="background:${cat.color}22">${cat.icon}</div>
+        <div class="card-meta">
+          <h2>${med.nome}</h2>
+          <div class="dci">${med.dci} · ATC: ${med.atc}</div>
+          <div class="badges">
+            <span class="badge" style="background:${cat.color}18;color:${cat.color};border-color:${cat.color}44">${med.grupo}</span>
+            <span class="badge" style="background:#e8f2ee;color:#2d5f4e;border-color:#b2d4c5">${med.componente}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALCULATOR -->
+    <div class="calc-section">
+      <div class="calc-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+        Calculadora de Dose por Peso
+      </div>
+      <div class="calc-body">
+        <div class="dose-ranges">
+          <div class="dose-ranges-title">Indicação / Esquema posológico</div>
+          <div class="dose-range-row">${doseOptions}</div>
+        </div>
+
+        <div class="calc-grid">
+          <div class="calc-field">
+            <label>Peso do paciente (kg)</label>
+            <input type="number" id="pesoInput" placeholder="Ex: 15" min="0.5" max="300" step="0.1" oninput="calcular()">
+          </div>
+          <div class="calc-field">
+            <label>Forma farmacêutica</label>
+            <select id="formaSelect" onchange="selectedFormaIdx=this.value; calcular()">${formaOptions}</select>
+          </div>
+          <div class="calc-field">
+            <label>Frequência personalizada</label>
+            <select id="freqSelect" onchange="calcular()">
+              <option value="1">1x ao dia (a cada 24h)</option>
+              <option value="2">2x ao dia (a cada 12h)</option>
+              <option value="3" selected>3x ao dia (a cada 8h)</option>
+              <option value="4">4x ao dia (a cada 6h)</option>
+              <option value="6">6x ao dia (a cada 4h)</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="calc-btn" onclick="calcular()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Calcular Dose
+        </button>
+
+        <div id="resultArea"></div>
+      </div>
+    </div>
+
+    <!-- INFO SECTIONS -->
+    <div class="info-card">
+      <div class="info-card-header">Posologia de referência · RENAME 2024</div>
+      <div class="info-card-body">
+        ${med.doses.map(d => `
+          <div class="alert-box alert-info" style="margin-bottom:8px">
+            <strong>${d.label}</strong><br>
+            <span style="font-weight:400">${d.intervalo}${d.obs ? ' · ' + d.obs : ''}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-header">Segurança e Interações</div>
+      <div class="info-card-body">
+        <div class="info-grid-2">
+          <div class="info-item">
+            <label>Contraindicações</label>
+            <div class="alert-box alert-danger">${med.contraindicacoes}</div>
+          </div>
+          <div class="info-item">
+            <label>Interações relevantes</label>
+            <p>${med.interacoes}</p>
+          </div>
+          <div class="info-item">
+            <label>Uso na gestação</label>
+            <div class="alert-box alert-warning">${med.gestacao}</div>
+          </div>
+          <div class="info-item">
+            <label>Observações clínicas</label>
+            <p>${med.obs}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════
+//  DOSE SELECTION
+// ═══════════════════════════════════════════════
+function selectDose(idx, el) {
+  selectedDoseIdx = idx;
+  document.querySelectorAll('.dose-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  calcular();
+}
+
+// ═══════════════════════════════════════════════
+//  CALCULATOR LOGIC
+// ═══════════════════════════════════════════════
+function calcular() {
+  const pesoEl = document.getElementById('pesoInput');
+  const formaEl = document.getElementById('formaSelect');
+  const freqEl = document.getElementById('freqSelect');
+  const resultArea = document.getElementById('resultArea');
+  if (!pesoEl || !formaEl || !resultArea) return;
+
+  const peso = parseFloat(pesoEl.value);
+  if (!peso || peso <= 0) { resultArea.innerHTML = ''; return; }
+
+  const med = activeMed;
+  if (!med) return;
+
+  const dose = med.doses[selectedDoseIdx];
+  const formaIdx = parseInt(formaEl.value);
+  const forma = med.formas[formaIdx];
+  const freqVal = parseInt(freqEl.value);
+
+  // Dose unit (mg/kg or UI/kg etc.)
+  const doseMgKgMin = dose.min;
+  const doseMgKgMax = dose.max;
+  const maxDia = dose.maxDose24h;
+
+  // Calcular dose total por dia
+  let doseTotalMinDia = doseMgKgMin * peso;
+  let doseTotalMaxDia = doseMgKgMax * peso;
+
+  // Aplicar dose máxima diária
+  const warnings = [];
+  if (doseTotalMinDia > maxDia && maxDia < 9999) {
+    doseTotalMinDia = maxDia;
+    warnings.push(`⚠️ Dose mínima calculada ultrapassaria a dose máxima diária de <strong>${maxDia} mg/dia</strong>. Utilizar a dose máxima recomendada.`);
+  }
+  if (doseTotalMaxDia > maxDia && maxDia < 9999) {
+    doseTotalMaxDia = maxDia;
+    if (!warnings.length) warnings.push(`⚠️ Dose calculada ultrapassaria o máximo diário de <strong>${maxDia} mg/dia</strong>. Aplicado limite máximo.`);
+  }
+
+  // Dose por administração — freqVal já é o número de administrações/dia
+  const numAdm = freqVal;
+  const dosePorAdmMin = doseTotalMinDia / numAdm;
+  const dosePorAdmMax = doseTotalMaxDia / numAdm;
+
+  // Calcular volume (mL) e comprimidos
+  let volMin = null, volMax = null, compMin = null, compMax = null;
+  let volMinR = null, volMaxR = null, compMinR = null, compMaxR = null; // arredondados
+  let formaLabel = '';
+  let extraInfo = '';
+  let avisoArred = '';
+
+  if (forma.tipo === 'solucao' || forma.tipo === 'solucao_inj') {
+    const conc = forma.concentracao;
+    if (conc > 0) {
+      volMin = dosePorAdmMin / conc;
+      volMax = dosePorAdmMax / conc;
+      volMinR = arredVol(volMin);
+      volMaxR = arredVol(volMax);
+      formaLabel = forma.tipo === 'solucao_inj' ? 'Volume injetável' : 'Volume oral';
+      // aviso se desvio > 10%
+      const maxDiff = Math.max(volMinR.diff, volMaxR.diff);
+      if (maxDiff > 0.10) {
+        avisoArred = `🔬 Valor exato calculado: <strong>${volMinR.exato === volMaxR.exato ? volMinR.exato : volMinR.exato + '–' + volMaxR.exato} mL</strong>. Arredondamento prático aplicado (>${Math.round(maxDiff*100)}% de desvio) — reavalie se dose crítica.`;
+      } else if (volMinR.valor !== volMinR.exato || volMaxR.valor !== volMaxR.exato) {
+        avisoArred = `ℹ️ Valor exato: <strong>${volMinR.exato === volMaxR.exato ? volMinR.exato : volMinR.exato + '–' + volMaxR.exato} mL</strong>. Arredondado para a graduação prática de seringa.`;
+      }
+    } else {
+      extraInfo = dose.label;
+    }
+  } else if (forma.tipo === 'comprimido') {
+    const conc = forma.concentracao;
+    compMin = dosePorAdmMin / conc;
+    compMax = dosePorAdmMax / conc;
+    compMinR = arredComp(compMin);
+    compMaxR = arredComp(compMax);
+    formaLabel = 'Comprimidos';
+    const maxDiff = Math.max(compMinR.diff, compMaxR.diff);
+    if (maxDiff > 0.15) {
+      avisoArred = `🔬 Valor exato calculado: <strong>${fmtExato(compMinR.exato,'comp')}</strong>. Arredondado para ${compMinR.label} comp. (desvio ${Math.round(maxDiff*100)}%) — confirme se aceitável para a dose prescrita.`;
+    } else if (compMinR.label !== fmtExato(compMinR.exato,'comp').replace(' comp.','')) {
+      avisoArred = `ℹ️ Valor exato: <strong>${fmtExato(compMinR.exato,'comp')}</strong>. Arredondado para frações práticas (inteiro ou metade).`;
+    }
+  } else if (forma.tipo === 'especial') {
+    extraInfo = dose.intervalo;
+  }
+
+  // Render result
+  let html = '';
+
+  if (forma.tipo === 'especial' || forma.concentracao === 0) {
+    html = `
+      <div style="margin-top:18px;padding:20px;background:var(--accent-light);border:1.5px solid #b2d4c5;border-radius:var(--radius)">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:8px">Orientação posológica</div>
+        <div style="font-size:15px;color:var(--text);font-weight:500;line-height:1.5">${dose.intervalo}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:6px">Dose tópica — não calculada por peso</div>
+      </div>`;
+  } else {
+    const doseDiaStr = doseTotalMinDia === doseTotalMaxDia
+      ? arred(doseTotalMinDia)
+      : `${arred(doseTotalMinDia)}–${arred(doseTotalMaxDia)}`;
+
+    const dosePorAdmStr = dosePorAdmMin === dosePorAdmMax
+      ? arred(dosePorAdmMin)
+      : `${arred(dosePorAdmMin)}–${arred(dosePorAdmMax)}`;
+
+    // ── Card principal destacado ──
+    let prescricaoHtml = '';
+    if (volMin !== null) {
+      const vMin = volMinR.valor, vMax = volMaxR.valor;
+      const vStr = vMin === vMax ? String(vMin) : `${vMin}–${vMax}`;
+      const tipoLabel = forma.tipo === 'solucao_inj' ? 'Volume injetável por dose' : 'Volume por dose';
+      // verificar se há forma comprimido disponível para mostrar equivalência
+      const formaComp = med.formas.find(f => f.tipo === 'comprimido');
+      const compEquivMinR = formaComp ? arredComp(dosePorAdmMin / formaComp.concentracao) : null;
+      const compEquivMaxR = formaComp ? arredComp(dosePorAdmMax / formaComp.concentracao) : null;
+      const compEquivStr = compEquivMinR !== null
+        ? (compEquivMinR.label === compEquivMaxR.label ? compEquivMinR.label : `${compEquivMinR.label}–${compEquivMaxR.label}`)
+        : null;
+      prescricaoHtml = `
+        <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:baseline;gap:6px">
+              <span style="font-family:'DM Serif Display',serif;font-size:52px;color:var(--accent);line-height:1">${vStr}</span>
+              <span style="font-size:22px;font-weight:600;color:var(--accent2)">mL</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-top:4px">${tipoLabel}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${forma.desc}</div>
+            <div style="font-size:12px;color:var(--text2)">Conc.: ${forma.concentracao} mg/mL</div>
+          </div>
+          ${compEquivStr ? `
+          <div style="border-left:2px solid #c8e0d5;padding-left:16px;margin-top:6px">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px">Equivale em comp.</div>
+            <div style="display:flex;align-items:baseline;gap:4px">
+              <span style="font-family:'DM Serif Display',serif;font-size:32px;color:var(--text2);line-height:1">${compEquivStr}</span>
+              <span style="font-size:14px;font-weight:500;color:var(--text2)">comp.</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${formaComp.desc}</div>
+          </div>` : ''}
+        </div>`;
+    } else if (compMin !== null) {
+      const cMin = compMinR.label, cMax = compMaxR.label;
+      const cStr = cMin === cMax ? cMin : `${cMin}–${cMax}`;
+      // verificar se há forma solução disponível para mostrar equivalência
+      const formaSol = med.formas.find(f => (f.tipo === 'solucao' || f.tipo === 'solucao_inj') && f.concentracao > 0);
+      const volEquivMinR = formaSol ? arredVol(dosePorAdmMin / formaSol.concentracao) : null;
+      const volEquivMaxR = formaSol ? arredVol(dosePorAdmMax / formaSol.concentracao) : null;
+      const volEquivStr = volEquivMinR !== null
+        ? (volEquivMinR.valor === volEquivMaxR.valor ? String(volEquivMinR.valor) : `${volEquivMinR.valor}–${volEquivMaxR.valor}`)
+        : null;
+      prescricaoHtml = `
+        <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:baseline;gap:6px">
+              <span style="font-family:'DM Serif Display',serif;font-size:52px;color:var(--accent);line-height:1">${cStr}</span>
+              <span style="font-size:18px;font-weight:600;color:var(--accent2)">comp.</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-top:4px">Comprimidos por dose</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${forma.desc}</div>
+          </div>
+          ${volEquivStr ? `
+          <div style="border-left:2px solid #c8e0d5;padding-left:16px;margin-top:6px">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px">Equivale em solução</div>
+            <div style="display:flex;align-items:baseline;gap:4px">
+              <span style="font-family:'DM Serif Display',serif;font-size:32px;color:var(--text2);line-height:1">${volEquivStr}</span>
+              <span style="font-size:14px;font-weight:500;color:var(--text2)">mL</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${formaSol.desc}</div>
+          </div>` : ''}
+        </div>`;
+    }
+
+    // ── Grid de métricas secundárias ──
+    html = `
+      <div style="margin-top:18px;background:var(--accent-light);border:1.5px solid #b2d4c5;border-radius:var(--radius);overflow:hidden">
+        <div style="padding:10px 18px;background:var(--accent);display:flex;align-items:center;gap:8px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <span style="font-size:12px;font-weight:600;color:#fff;letter-spacing:0.3px">DOSE CALCULADA — ${peso} kg</span>
+        </div>
+        <div style="padding:20px 18px">
+          ${prescricaoHtml}
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid #c8e0d5;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div style="background:#fff;border:1px solid #d0e8dc;border-radius:var(--radius-sm);padding:12px;text-align:center">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px">Dose por administração</div>
+              <div style="font-size:20px;font-weight:600;color:var(--text)">${dosePorAdmStr}</div>
+              <div style="font-size:11px;color:var(--text2)">mg / dose</div>
+            </div>
+            <div style="background:#fff;border:1px solid #d0e8dc;border-radius:var(--radius-sm);padding:12px;text-align:center">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px">Frequência</div>
+              <div style="font-size:20px;font-weight:600;color:var(--text)">${numAdm}×</div>
+              <div style="font-size:11px;color:var(--text2)">ao dia</div>
+            </div>
+            <div style="background:#fff;border:1px solid #d0e8dc;border-radius:var(--radius-sm);padding:12px;text-align:center">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px">Total diário</div>
+              <div style="font-size:20px;font-weight:600;color:var(--text)">${doseDiaStr}</div>
+              <div style="font-size:11px;color:var(--text2)">mg / dia</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    if (volMin !== null) {
+      const vStr3 = volMinR.valor === volMaxR.valor ? String(volMinR.valor) : `${volMinR.valor}–${volMaxR.valor}`;
+      extraInfo += `Volume calculado: <strong>${vStr3} mL</strong> por dose · ${forma.desc}`;
+    } else if (compMin !== null) {
+      const cStr3 = compMinR.label === compMaxR.label ? compMinR.label : `${compMinR.label}–${compMaxR.label}`;
+      extraInfo += `Equivale a <strong>${cStr3} comprimido(s)</strong> de ${forma.concentracao} mg por administração`;
+    }
+  }
+
+  if (warnings.length) {
+    html += warnings.map(w => `<div class="result-warning">${w}</div>`).join('');
+  }
+
+  // Aviso de arredondamento clínico
+  if (avisoArred) {
+    const isAlerta = avisoArred.startsWith('🔬');
+    const bg  = isAlerta ? 'var(--amber-light)' : 'var(--blue-light)';
+    const brd = isAlerta ? '#e8d5a0' : '#a8c0e0';
+    const clr = isAlerta ? 'var(--amber)' : 'var(--blue)';
+    html += `<div class="result-warning" style="background:${bg};border-color:${brd};color:${clr}">${avisoArred}</div>`;
+  }
+
+  if (extraInfo) {
+    html += `<div class="result-warning" style="background:var(--blue-light);border-color:#a8c0e0;color:var(--blue)">ℹ️ ${extraInfo}</div>`;
+  }
+
+  if (dose.obs) {
+    html += `<div class="result-warning">📋 ${dose.obs}</div>`;
+  }
+
+  // ── Bloco prescrição resumida (para copiar rápido)
+  if (forma.tipo !== 'especial' && forma.concentracao !== 0) {
+    const intervaloHoras = Math.round(24 / numAdm);
+    const dosePorAdmStr2 = dosePorAdmMin === dosePorAdmMax
+      ? arred(dosePorAdmMin)
+      : `${arred(dosePorAdmMin)}–${arred(dosePorAdmMax)}`;
+
+    let prescStr = '';
+    if (volMin !== null) {
+      const vStr2 = volMinR.valor === volMaxR.valor ? String(volMinR.valor) : `${volMinR.valor}–${volMaxR.valor}`;
+      prescStr = `Dar ${vStr2} mL (${dosePorAdmStr2} mg) a cada ${intervaloHoras}h`;
+    } else if (compMin !== null) {
+      const cStr2 = compMinR.label === compMaxR.label ? compMinR.label : `${compMinR.label}–${compMaxR.label}`;
+      prescStr = `Dar ${cStr2} comp. de ${forma.concentracao} mg (${dosePorAdmStr2} mg) a cada ${intervaloHoras}h`;
+    }
+
+    if (prescStr) {
+      html += `
+        <div style="margin-top:12px;background:#fff;border:1.5px solid #b2d4c5;border-radius:var(--radius-sm);padding:14px 16px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:4px">📋 Prescrição resumida</div>
+            <div id="prescText" style="font-size:14px;font-weight:500;color:var(--text);line-height:1.4">${prescStr}</div>
+          </div>
+          <button onclick="copiarPrescricao()" style="flex-shrink:0;padding:8px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif" id="copyBtn">Copiar</button>
+        </div>`;
+    }
+  }
+
+  resultArea.innerHTML = html;
+
+  // Scroll suave ao resultado
+  setTimeout(() => {
+    resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function copiarPrescricao() {
+  const el = document.getElementById('prescText');
+  const btn = document.getElementById('copyBtn');
+  if (!el || !btn) return;
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    btn.textContent = '✓ Copiado!';
+    btn.style.background = '#1D9E75';
+    setTimeout(() => { btn.textContent = 'Copiar'; btn.style.background = 'var(--accent)'; }, 2000);
+  }).catch(() => {
+    // fallback
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => { btn.textContent = 'Copiar'; }, 2000);
+  });
+}
+
+// ─── Helpers ───
+
+// Arredondamento genérico para exibição (1 casa decimal)
+function arred(n) { return n % 1 === 0 ? n : parseFloat(n.toFixed(1)); }
+
+// ── Arredondamento clínico de VOLUME (mL) ──────────────────────────────────
+// Regras práticas de seringa:
+//   • Volumes < 1 mL  → arredonda ao 0,1 mL mais próximo
+//   • Volumes 1–5 mL  → arredonda ao 0,5 mL mais próximo
+//   • Volumes > 5 mL  → arredonda ao 1 mL mais próximo
+// Retorna { valor, arredondado, diff } para permitir exibir aviso se diff > 10%
+function arredVol(n) {
+  let step;
+  if (n < 1)       step = 0.1;
+  else if (n <= 5) step = 0.5;
+  else             step = 1;
+
+  const arredondado = Math.round(n / step) * step;
+  // Garantir no mínimo 1 casa decimal visível e nunca zero
+  const valorFinal = Math.max(arredondado, step);
+  const diff = Math.abs(valorFinal - n) / n; // desvio percentual
+  return {
+    valor: parseFloat(valorFinal.toFixed(n < 1 ? 1 : (n <= 5 ? 1 : 0))),
+    exato: parseFloat(n.toFixed(2)),
+    diff: diff
+  };
+}
+
+// ── Arredondamento clínico de COMPRIMIDOS ──────────────────────────────────
+// Regras práticas:
+//   • Apenas frações de ½ são aceitas (comprimido inteiro ou metade)
+//   • Nunca abaixo de ½ comprimido
+//   • ¼ e ¾ são substituídos pelo meio mais próximo (½ ou 1)
+// Retorna { valor (número), label (string), exato, diff }
+function arredComp(n) {
+  // Frações praticáveis: 0.5, 1, 1.5, 2, 2.5 …
+  const min = 0.5;
+  const arredondado = Math.max(min, Math.round(n * 2) / 2); // múltiplo de 0,5 mais próximo, mínimo 0,5
+  const diff = Math.abs(arredondado - n) / n;
+
+  // Formatar label
+  const whole = Math.floor(arredondado);
+  const frac  = arredondado - whole;
+  let label;
+  if (frac === 0)  label = `${whole}`;
+  else if (whole === 0) label = `½`;
+  else label = `${whole} e ½`;
+
+  return {
+    valor: arredondado,
+    label,
+    exato: parseFloat(n.toFixed(2)),
+    diff
+  };
+}
+
+// Formata valor exato para exibição no aviso
+function fmtExato(n, tipo) {
+  if (tipo === 'vol')  return parseFloat(n.toFixed(2)) + ' mL';
+  if (tipo === 'comp') {
+    const whole = Math.floor(n);
+    const frac  = n - whole;
+    if (frac < 0.1)       return `${whole} comp.`;
+    if (frac < 0.35)      return `${whole} e ¼ comp.`;
+    if (frac < 0.65)      return `${whole} e ½ comp.`;
+    if (frac < 0.90)      return `${whole} e ¾ comp.`;
+    return `${whole + 1} comp.`;
+  }
+  return String(n);
+}
+
+init();
+</script>
+</body>
+</html>

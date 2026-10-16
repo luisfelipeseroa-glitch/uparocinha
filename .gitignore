@@ -1,0 +1,8 @@
+# Dados pessoais e segredos — NUNCA vão para o GitHub (o site é público)
+*.csv
+senhas_iniciais*
+contatos.json
+ajustes.json
+.env
+.env.*
+node_modules/
