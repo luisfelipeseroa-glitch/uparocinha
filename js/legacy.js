@@ -652,6 +652,8 @@ async function chatInit() {
   chatAplicarFoto(u.matricula, document.getElementById('chat-perfil-foto'), u.nome, true);
   chatAplicarFotoTopbar();
   await chatPollGeral();
+  await chatPollDm();
+  chatUpdateBadge();
   chatPollStart();
   chatCarregarEquipe();
 }
@@ -731,7 +733,10 @@ function chatPollStart() {
   if (_chatPollTimer) clearInterval(_chatPollTimer);
   _chatPollTimer = setInterval(async()=>{
     await chatPollGeral();
-    if (_chatDmTarget) await chatPollDm(_chatDmTarget.matricula);
+    await chatPollDm();
+    /* conversa privada aberta na tela: mensagens que chegam já contam como lidas */
+    if (_chatOpen && _chatTab==='dm' && _chatDmTarget) chatMarcarLido('dm_'+_chatDmTarget.matricula);
+    else if (_chatOpen && _chatTab==='geral') chatMarcarLido('geral');
     chatUpdateBadge();
     if (!_chatOpen) return;
     if (_chatTab==='geral') chatRenderGeral();
@@ -751,17 +756,25 @@ async function chatPollGeral() {
   } catch(e) {}
 }
 
-async function chatPollDm(matTarget) {
+async function chatPollDm() {
+  /* Busca TODAS as conversas privadas em que o usuário participa (não só a aberta),
+     para o aviso (bolinha vermelha) funcionar para qualquer mensagem recebida. */
   try {
     const rows = await fetchSheet(CHAT_ABA_DM);
-    const chave = chatDmChave(currentUser.matricula, matTarget);
-    const matMe = currentUser.matricula;
-    _chatMsgsDm[chave] = rows.map(r=>({
+    const matMe = String(currentUser.matricula);
+    const novo = {};
+    rows.map(r=>({
       id:r['ID']||r['A']||'', ts:parseInt(r['TS']||r['B']||0),
       de:String(r['DE']||r['C']||''), nome_de:r['NOME_DE']||r['D']||'',
       para:String(r['PARA']||r['E']||''), texto:r['TEXTO']||r['F']||''
-    })).filter(m=>m.texto&&((m.de===matMe&&m.para===matTarget)||(m.de===matTarget&&m.para===matMe)))
-      .sort((a,b)=>a.ts-b.ts);
+    })).filter(m=>m.texto&&(m.de===matMe||m.para===matMe))
+      .sort((a,b)=>a.ts-b.ts)
+      .forEach(m=>{
+        const outro = m.de===matMe ? m.para : m.de;
+        const chave = chatDmChave(matMe, outro);
+        (novo[chave]=novo[chave]||[]).push(m);
+      });
+    _chatMsgsDm = novo;
   } catch(e) {}
 }
 
