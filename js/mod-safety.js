@@ -125,7 +125,9 @@
           <h3 style="margin-top:18px">📝 Resumo do plantão</h3>
           <div class="campo"><label class="fl" for="sh_resumo">Resumo geral do plantão *</label><textarea id="sh_resumo" rows="4" maxlength="2000">${esc(reg ? reg.resumo || '' : '')}</textarea></div>
           <h3 style="margin-top:18px">📷 Foto da equipe participante</h3>
-          <div class="campo"><label class="fl" for="sh_foto">Foto da equipe ${reg ? '(deixe vazio para manter a atual)' : '*'}</label><input type="file" id="sh_foto" accept="image/*"><div class="ajuda">No celular, escolha “Câmera” para tirar a foto agora. Reúna a equipe que participou do huddle.</div><div id="sh_prev"></div></div>
+          <div class="campo"><label class="fl">Foto da equipe ${reg ? '(deixe vazio para manter a atual)' : '*'}</label>
+            <div class="barra" style="margin:0"><button type="button" class="btn btn-primary btn-sm" id="sh_cam"><i class="fas fa-camera"></i> Tirar foto agora</button><button type="button" class="btn btn-ghost btn-sm" id="sh_gal"><i class="fas fa-image"></i> Escolher da galeria</button></div>
+            <input type="file" id="sh_foto" accept="image/*" style="display:none"><div class="ajuda">Reúna a equipe que participou do huddle e tire a foto.</div><div id="sh_prev"></div></div>
           <h3 style="margin-top:18px">✍️ Assinatura do executante</h3>
           <div class="ajuda">Assine com o dedo (tela) ou com o mouse para confirmar as informações.${reg && reg.assinatura ? ' Se não assinar de novo, a assinatura anterior é mantida.' : ''}</div>
           <canvas id="sh_as" width="500" height="150" style="width:100%;max-width:520px;border:1.5px dashed var(--gray-300);border-radius:8px;background:#fff;margin-top:6px"></canvas>
@@ -140,13 +142,33 @@
           const k = g.dataset.k; resp[k] = resp[k] === b.dataset.v ? undefined : b.dataset.v;
           g.querySelectorAll('button').forEach(x => { x.classList.toggle('btn-primary', resp[k] === x.dataset.v); x.classList.toggle('btn-ghost', resp[k] !== x.dataset.v); });
         }));
-        f.querySelector('#sh_foto').onchange = e => { const a = e.target.files[0]; f.querySelector('#sh_prev').innerHTML = a ? `<img src="${URL.createObjectURL(a)}" style="max-width:260px;max-height:200px;margin-top:8px;border-radius:8px">` : ''; };
+        let fotoArq = null;
+        const mostra = a => { fotoArq = a; f.querySelector('#sh_prev').innerHTML = a ? `<img src="${URL.createObjectURL(a)}" style="max-width:260px;max-height:200px;margin-top:8px;border-radius:8px">` : ''; };
+        const inp = f.querySelector('#sh_foto');
+        inp.onchange = e => mostra(e.target.files[0] || null);
+        f.querySelector('#sh_gal').onclick = () => { inp.removeAttribute('capture'); inp.click(); };
+        f.querySelector('#sh_cam').onclick = async () => {
+          if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { inp.setAttribute('capture', 'environment'); inp.click(); return; }
+          let stream;
+          try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); }
+          catch (er) { U.toast('Não consegui abrir a câmera (permissão negada?). Use "Escolher da galeria".', 'erro'); inp.setAttribute('capture', 'environment'); inp.click(); return; }
+          const fim = () => stream.getTracks().forEach(t => t.stop());
+          const m = U.modal({ titulo: 'Foto da equipe', largura: 560, corpo: '<video id="sh_vid" autoplay playsinline muted style="width:100%;border-radius:8px;background:#000"></video>',
+            botoes: [{ rotulo: 'Cancelar', acao: () => { fim(); } },
+              { rotulo: 'Tirar foto', classe: 'btn-primary', acao: el => {
+                const v = el.querySelector('#sh_vid'); if (!v.videoWidth) { U.toast('Aguarde a câmera abrir.', 'erro'); return false; }
+                const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
+                fim(); c.toBlob(b => mostra(new File([b], 'equipe.jpg', { type: 'image/jpeg' })), 'image/jpeg', 0.85);
+              } }] });
+          m.el.querySelector('#sh_vid').srcObject = stream;
+          const x = m.el.querySelector('.upa-x'); if (x) x.addEventListener('click', fim);
+        };
         f.onsubmit = async e => {
           e.preventDefault();
           const val = n => (f.querySelector('#sh_' + n).value || '').trim();
           const falta = [['data', 'Data'], ['nome', 'Nome do profissional'], ['cargo', 'Cargo ou função'], ['resumo', 'Resumo geral do plantão']].find(([n]) => !val(n));
           if (falta) { U.toast('Preencha: ' + falta[1], 'erro'); f.querySelector('#sh_' + falta[0]).focus(); return; }
-          const foto = f.querySelector('#sh_foto').files[0];
+          const foto = fotoArq;
           if (!reg && !foto) { U.toast('Tire a foto da equipe participante.', 'erro'); return; }
           if (!reg && pad.vazio()) { U.toast('Faça a assinatura.', 'erro'); return; }
           const btn = f.querySelector('#sh_env'); btn.disabled = true;
