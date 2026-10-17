@@ -68,7 +68,8 @@ const fix = {
   rh_solicitacoes: [{ ...base, id: 'r1', tipo: 'extra', matricula: '1', profissao: 'Enfermeiro', setor: 'UPA', dados: { data: '2026-10-20', turno: 'Noite', justificativa: 'cobertura' }, status: 'pendente', criado_por: 'outro' }],
   treinamentos: [{ ...base, titulo: 'Higiene das mãos', descricao: 'd', funcoes: [], carga_horaria: 2, nota_minima: 70, obrigatorio: true, ativo: true }],
   treinamento_questoes: [], treinamento_registros: [],
-  safety_huddles: [{ ...base, data_huddle: '2026-10-16', turno: 'manha', hora: '08:00:00', lotacao: 'alerta', checklist: { 0: true }, riscos: 'r' }],
+  safety_huddles: [{ ...base, data_huddle: '2026-10-16', turno: 'manha', hora: '08:00:00', lotacao: 'alerta', checklist: { 0: true }, riscos: 'r' },
+    { ...base, id: 2, data_huddle: '2026-10-17', turno: 'tarde', ident: { nome: 'Ana', cargo: 'Enfermeiro' }, respostas: { eq1: 'sim', pa1: 'nao', po2: '30-60', nir_am: 3 }, resumo: 'Plantão tranquilo', foto_path: 'u/foto.jpg' }],
   manutencao_chamados: [{ ...base, setor: 'Farmácia', categoria: 'Elétrica', descricao: 'Lâmpada queimada', prioridade: 'media', status: 'aberto' }],
   profiles: [{ matricula: '1', nome: 'Fulano', funcao: 'Médico' }],
 };
@@ -196,6 +197,31 @@ await botoes('Enfermeiro', 'treinamento', '[data-aba=ger]', false, 'Gerenciar cu
 await botoes('Manutenção', 'manutencao', '[data-aba=nova]', true, 'Novo chamado');
 await botoes('Manutenção', 'manutencao', '[data-at]', true, 'Atender');
 await botoes('Enfermeiro', 'manutencao', '[data-at]', false, 'Atender');
+await botoes('Vigilante', 'safety', '#sh-novo', true, 'Novo huddle');
+await botoes('Vigilante', 'safety', '[data-ver]', true, 'Ver huddle');
+await botoes('Vigilante', 'safety', '[data-ed],[data-ex]', false, 'Editar/Excluir huddle');
+await botoes('Gestor Assistencial', 'safety', '[data-ed]', true, 'Editar huddle (gestor)');
+await botoes('Gestor Assistencial', 'safety', '[data-ex]', true, 'Excluir huddle (gestor)');
+{
+  const { w, erros } = await abrir('Enfermeiro');
+  w.UPA.go('safety'); await espera(120);
+  w.document.querySelector('#sh-novo').click(); await espera(60);
+  const d = w.document;
+  ok(d.querySelectorAll('.sh-sn').length >= 60, 'huddle: perguntas Sim/Não completas (' + d.querySelectorAll('.sh-sn').length + ')');
+  ok(d.querySelectorAll('h3').length >= 26, 'huddle: seções por setor');
+  ok(!!d.querySelector('#sh_foto') && !!d.querySelector('#sh_as') && !!d.querySelector('#sh_resumo'), 'huddle: foto, assinatura e resumo');
+  ok(d.querySelector('#sh_nome').value.length > 0, 'huddle: nome do profissional preenchido');
+  d.querySelector('.sh-sn button[data-v=sim]').click();
+  ok(d.querySelector('.sh-sn button[data-v=sim]').classList.contains('btn-primary'), 'huddle: botão Sim marca');
+  d.querySelector('#sh_resumo').value = '';
+  d.querySelector('#sh-form').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true })); await espera(40);
+  ok(/Resumo/.test(d.body.textContent), 'huddle: exige resumo');
+  d.querySelector('#sh_resumo').value = 'ok';
+  d.querySelector('#sh-form').dispatchEvent(new w.Event('submit', { cancelable: true, bubbles: true })); await espera(40);
+  ok(/foto da equipe/i.test(d.body.textContent), 'huddle: exige foto da equipe');
+  ok(!erros.some((e) => /Error/.test(e)), 'huddle: sem erros de script');
+  w.close();
+}
 await botoes('Médico', 'avisos', '#av-novo', false, 'Novo aviso');
 await botoes('Gestor Assistencial', 'avisos', '#av-novo', true, 'Novo aviso');
 

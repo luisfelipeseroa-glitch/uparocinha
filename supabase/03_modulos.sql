@@ -699,6 +699,13 @@ create table if not exists public.safety_huddles (
 );
 select public._rls_padrao('safety_huddles', 'safety');
 
+-- Safety Huddle completo (formulário por setores, assinatura e foto da equipe)
+alter table public.safety_huddles add column if not exists ident      jsonb not null default '{}'::jsonb;
+alter table public.safety_huddles add column if not exists respostas  jsonb not null default '{}'::jsonb;
+alter table public.safety_huddles add column if not exists resumo     text;
+alter table public.safety_huddles add column if not exists assinatura  text;
+alter table public.safety_huddles add column if not exists foto_path   text;
+
 -- =====================================================================
 -- 13. SOLICITAÇÃO DE MANUTENÇÃO
 -- =====================================================================

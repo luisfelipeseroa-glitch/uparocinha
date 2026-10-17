@@ -10,7 +10,8 @@ values
   ('rh-anexos',        'rh-anexos',        false,  5242880),   --  5 MB
   ('passagem-pdfs',    'passagem-pdfs',    false, 10485760),   -- 10 MB
   ('manutencao-fotos', 'manutencao-fotos', false,  5242880),   --  5 MB
-  ('treinamento',      'treinamento',      false, 52428800)    -- 50 MB
+  ('treinamento',      'treinamento',      false, 52428800),   -- 50 MB
+  ('safety-fotos',     'safety-fotos',     false,  5242880)    --  5 MB
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit;
 
 -- ---- Documentos institucionais: todos leem; gestores gravam/alteram/apagam
@@ -70,3 +71,11 @@ create policy "trein_upd" on storage.objects for update to authenticated
   using (bucket_id = 'treinamento' and public.pode('treinamento', 'editar'));
 create policy "trein_del" on storage.objects for delete to authenticated
   using (bucket_id = 'treinamento' and public.pode('treinamento', 'excluir'));
+
+-- ---- Foto da equipe do Safety Huddle: todos que podem ver/registrar huddle
+drop policy if exists "sh_ler" on storage.objects;
+drop policy if exists "sh_ins" on storage.objects;
+create policy "sh_ler" on storage.objects for select to authenticated
+  using (bucket_id = 'safety-fotos' and public.pode('safety', 'ver'));
+create policy "sh_ins" on storage.objects for insert to authenticated
+  with check (bucket_id = 'safety-fotos' and public.pode('safety', 'criar'));

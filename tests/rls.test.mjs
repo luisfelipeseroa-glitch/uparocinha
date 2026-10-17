@@ -338,8 +338,9 @@ ok(!(await tenta('Gestor Assistencial', `select public.treinamento_validar($1)`,
 // Safety huddle
 ok((await tenta('Maqueiro', `insert into public.safety_huddles (turno, checklist) values ('manha','{"a":true}'::jsonb)`)).ok, 'qualquer um registra huddle');
 ok(!(await tenta('Manutenção', `insert into public.safety_huddles (turno) values ('manha')`)).ok, 'terceiro NÃO registra huddle');
+ok((await tenta('Maqueiro', `insert into public.safety_huddles (turno, ident, respostas, resumo, assinatura, foto_path) values ('tarde','{"nome":"A"}'::jsonb,'{"eq1":"sim"}'::jsonb,'ok','data:x','u/f.jpg')`)).ok, 'huddle completo (respostas, resumo, assinatura, foto) grava');
 ok((await tenta('Maqueiro', `delete from public.safety_huddles`)).n === 0, 'maqueiro não apaga huddle');
-ok((await tenta('Gestor Assistencial', `delete from public.safety_huddles`)).n === 1, 'gestor apaga huddle');
+ok((await tenta('Gestor Assistencial', `delete from public.safety_huddles`)).n === 2, 'gestor apaga huddle');
 
 // Manutenção
 const man = (quem) => tenta(quem, `insert into public.manutencao_chamados (setor, categoria, descricao, status, responsavel) values ('Sala Amarela','Elétrica','Tomada solta no leito 2','concluido','eu') returning id, status, responsavel`);

@@ -67,3 +67,11 @@
 
 /* impressão do site */
 @media print{.topbar,.sidebar,.mv-header,.barra,.banner,.right-panel,#chat-fab,#chat-window{display:none!important}.main{margin:0!important}}
+/* Safety Huddle */
+.sh-grade{display:grid;grid-template-columns:1fr;gap:6px}
+.sh-q{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);background:#fff}
+.sh-q.sh-w{display:block}.sh-t{font-size:13px;font-weight:600;color:var(--gray-700)}
+.sh-sn{display:flex;gap:6px;flex-shrink:0}
+.sh-q select{max-width:190px}
+.sh-doc table{border-collapse:collapse;width:100%;font-size:12px}.sh-doc td{border:1px solid var(--gray-200);padding:4px 7px}
+.sh-doc .assin img{max-height:60px}
