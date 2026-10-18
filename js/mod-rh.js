@@ -153,6 +153,16 @@
 
   U.registrar({
     id: 'rh', label: 'RH', icone: 'fa-id-badge', cor: 'c-rh',
+    home() {
+      U.vigiar(async () => {
+        const a = await U.db(window.sb.from('rh_solicitacoes').select('id').eq('status', 'aguardando_colega').eq('segundo_matricula', U.ctx.matricula));
+        U.pendencia('rh_ass', 'rh', 'ass', a.length, `${a.length === 1 ? '1 troca de plantão aguarda' : a.length + ' trocas de plantão aguardam'} a sua assinatura`);
+        if (U.can('rh', 'editar')) {
+          const p = (await U.db(window.sb.from('rh_solicitacoes').select('id, criado_por').eq('status', 'pendente'))).filter(r => r.criado_por !== U.ctx.id);
+          U.pendencia('rh_aut', 'rh', 'aut', p.length, `${p.length === 1 ? '1 solicitação aguarda' : p.length + ' solicitações aguardam'} a sua autorização`);
+        }
+      });
+    },
     render(el) {
       let ctl;
       const abas = [

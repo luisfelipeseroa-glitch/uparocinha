@@ -87,12 +87,13 @@
       let sub = null;
       const lista = async () => {
         const l = await U.db(window.sb.from('safety_huddles').select('*').order('data_huddle', { ascending: false }).order('criado_em', { ascending: false }).limit(60));
-        el.innerHTML = `<div class="barra"><button class="btn btn-primary" id="sh-novo"><i class="fas fa-plus"></i> Novo Safety Huddle</button></div>` +
+        el.innerHTML = `<div class="barra"><button class="btn btn-primary" id="sh-novo"><i class="fas fa-plus"></i> Novo Safety Huddle</button>${U.can('safety', 'editar') ? '<button class="btn btn-ghost" id="sh-rel"><i class="fas fa-chart-simple"></i> Relatório mensal</button>' : ''}</div>` +
           (l.map(h => `<div class="cx"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${U.fmtData(h.data_huddle)} · ${esc(U.turnoNome(h.turno))}</b>${h.hora ? ' · ' + String(h.hora).slice(0, 5) : ''}<div class="ajuda">Registrado por ${esc(h.criado_por_nome || '—')} em ${U.fmtDH(h.criado_em)}</div></div>
             <div>${novoFormato(h) ? `<span class="tag azul">${contaSim(h)} respostas "Sim"</span> ${h.foto_path ? '<span class="tag verde"><i class="fas fa-camera"></i> foto da equipe</span>' : ''}` : '<span class="tag">formato antigo</span>'}</div></div>
             ${h.resumo ? `<p style="font-size:13px;margin-top:6px">${esc(h.resumo.length > 200 ? h.resumo.slice(0, 200) + '…' : h.resumo)}</p>` : ''}
             <div class="barra" style="margin:8px 0 0"><button class="btn btn-ghost btn-sm" data-ver="${h.id}"><i class="fas fa-eye"></i> Ver</button>${U.can('safety', 'editar') && novoFormato(h) ? `<button class="btn btn-ghost btn-sm" data-ed="${h.id}"><i class="fas fa-pen"></i> Editar</button>` : ''}${U.can('safety', 'excluir') ? `<button class="btn btn-ghost btn-sm" data-ex="${h.id}"><i class="fas fa-trash"></i> Excluir</button>` : ''}</div></div>`).join('') || '<div class="vazio">Nenhum huddle registrado.</div>');
         el.querySelector('#sh-novo').onclick = () => formulario(null);
+        const br = el.querySelector('#sh-rel'); if (br) br.onclick = () => relatorio();
         el.querySelectorAll('[data-ver]').forEach(b => b.onclick = () => ver(l.find(x => String(x.id) === b.dataset.ver)));
         el.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => formulario(l.find(x => String(x.id) === b.dataset.ed)));
         el.querySelectorAll('[data-ex]').forEach(b => b.onclick = async () => { if (!await U.confirmar('Excluir este registro de huddle?', 'Excluir', true)) return; try { await U.db(window.sb.from('safety_huddles').delete().eq('id', b.dataset.ex)); await lista(); } catch (e) { U.erro(e); } });
@@ -104,6 +105,44 @@
         const corpo = novoFormato(h) ? resumoHtml(h, url) : legadoHtml(h);
         U.modal({ titulo: 'Safety Huddle', largura: 760, corpo: `<div class="sh-doc">${corpo}</div>`,
           botoes: [{ rotulo: 'Fechar' }, { rotulo: 'Imprimir / PDF', classe: 'btn-primary', acao: () => { U.imprimir(novoFormato(h) ? resumoHtml(h, url) : legadoHtml(h), 'Safety Huddle'); return false; } }] });
+      };
+
+
+      /* Relatório mensal (gestores): quantos huddles, por turno, e como foram as respostas */
+      const relatorio = async (ano, mes) => {
+        const hoje = U.hojeISO(); ano = ano || Number(hoje.slice(0, 4)); mes = mes || Number(hoje.slice(5, 7));
+        const ini = `${ano}-${String(mes).padStart(2, '0')}-01`, fim = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
+        const l = await U.db(window.sb.from('safety_huddles').select('*').gte('data_huddle', ini).lt('data_huddle', fim).order('data_huddle'));
+        const novos = l.filter(novoFormato);
+        const dias = new Set(l.map(h => h.data_huddle));
+        const porTurno = t => l.filter(h => h.turno === t).length;
+        const sns = todas.filter(it => it.tipo === SN).map(it => {
+          const sim = novos.filter(h => (h.respostas || {})[it.k] === 'sim').length, nao = novos.filter(h => (h.respostas || {})[it.k] === 'nao').length;
+          return { it, sim, nao };
+        });
+        const topSim = sns.filter(x => x.sim > 0).sort((a, b) => b.sim - a.sim).slice(0, 8);
+        const nums = todas.filter(it => it.tipo === NUM).map(it => {
+          const v = novos.map(h => (h.respostas || {})[it.k]).filter(x => x !== undefined && x !== null && x !== '').map(Number).filter(isFinite);
+          return { it, n: v.length, media: v.length ? v.reduce((a, b) => a + b, 0) / v.length : null, max: v.length ? Math.max(...v) : null };
+        }).filter(x => x.n);
+        const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const kpi = (n, r) => `<div class="cx" style="flex:1;min-width:120px;text-align:center"><div style="font-size:26px;font-weight:800;color:var(--blue-dark)">${n}</div><div class="ajuda">${r}</div></div>`;
+        el.innerHTML = `<div class="barra"><button class="btn btn-ghost" id="shr-voltar"><i class="fas fa-chevron-left"></i> Voltar</button>
+          <input type="number" id="shr-ano" value="${ano}" min="2020" max="2100" style="width:90px;padding:8px;border:1.5px solid var(--gray-200);border-radius:6px">
+          <select id="shr-mes" style="padding:9px;border:1.5px solid var(--gray-200);border-radius:6px">${MESES.map((m, i) => `<option value="${i + 1}"${i + 1 === mes ? ' selected' : ''}>${m}</option>`).join('')}</select>
+          <span class="espaco"></span><button class="btn btn-ghost" id="shr-xls"><i class="fas fa-file-excel"></i> Excel</button></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">${kpi(l.length, 'huddles no mês')}${kpi(dias.size, 'dias com huddle')}${kpi(porTurno('manha'), 'manhã')}${kpi(porTurno('tarde'), 'tarde')}${kpi(porTurno('noite'), 'noite')}${kpi(l.filter(h => h.foto_path).length, 'com foto da equipe')}</div>
+          <div class="section-title">Respostas "Sim" mais frequentes</div>
+          ${topSim.length ? `<div class="cx"><table class="tb"><thead><tr><th>Pergunta</th><th style="width:70px">Sim</th><th style="width:70px">Não</th><th style="width:80px">% Sim</th></tr></thead><tbody>${topSim.map(x => `<tr><td>${esc(x.it.t)}</td><td><b>${x.sim}</b></td><td>${x.nao}</td><td>${Math.round(100 * x.sim / Math.max(1, x.sim + x.nao))}%</td></tr>`).join('')}</tbody></table>
+          <div class="ajuda">Atenção: em algumas perguntas "Sim" é a resposta boa (ex.: "Autoclave funcionante?"). Leia cada pergunta.</div></div>` : '<div class="vazio">Sem respostas no formato novo neste mês.</div>'}
+          ${nums.length ? `<div class="section-title" style="margin-top:14px">Números informados (NIR)</div><div class="cx"><table class="tb"><thead><tr><th>Item</th><th style="width:90px">Registros</th><th style="width:90px">Média</th><th style="width:90px">Máximo</th></tr></thead><tbody>${nums.map(x => `<tr><td>${esc(x.it.t)}</td><td>${x.n}</td><td>${x.media.toFixed(1).replace('.', ',')}</td><td>${x.max}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
+        el.querySelector('#shr-voltar').onclick = () => lista();
+        el.querySelector('#shr-ano').onchange = e => relatorio(Number(e.target.value) || ano, mes);
+        el.querySelector('#shr-mes').onchange = e => relatorio(ano, Number(e.target.value));
+        el.querySelector('#shr-xls').onclick = () => U.baixarCsv(`safety_huddle_${ano}-${String(mes).padStart(2, '0')}.csv`,
+          ['Data', 'Turno', 'Profissional', 'Cargo', 'Respostas Sim', 'Respostas Não', 'Foto da equipe', 'Resumo'],
+          l.map(h => [U.fmtData(h.data_huddle), U.turnoNome(h.turno), (h.ident || {}).nome || h.criado_por_nome || '', (h.ident || {}).cargo || '',
+            novoFormato(h) ? contaSim(h) : '', novoFormato(h) ? Object.values(h.respostas || {}).filter(v => v === 'nao').length : '', h.foto_path ? 'Sim' : 'Não', h.resumo || '']));
       };
 
       const formulario = reg => {

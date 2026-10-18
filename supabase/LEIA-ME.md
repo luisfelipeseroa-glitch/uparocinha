@@ -9,12 +9,13 @@ O site (GitHub Pages) continua o mesmo endereço. O que muda: agora ele conversa
 Painel do Supabase → **Authentication → Sign In / Providers** → desligue **"Allow new users to sign up"**.
 (Assim ninguém de fora cria conta; só entram as matrículas que você importar.)
 
-## 2) Supabase — criar tabelas e regras (4 arquivos, nesta ordem)
+## 2) Supabase — criar tabelas e regras (5 arquivos, nesta ordem)
 **SQL Editor → New query**, cole o conteúdo do arquivo, clique **Run**. Repetir para cada um:
 1. `supabase/01_base.sql`
 2. `supabase/02_permissoes.sql`  ← aqui ficam as regras de quem pode o quê (dá para ajustar depois e rodar de novo)
 3. `supabase/03_modulos.sql`
 4. `supabase/04_storage.sql`
+5. `supabase/05_painel.sql`  ← Painel do Gestor (adesão e registro de ações) e troca autorizada refletindo na Escala
 
 Pode rodar de novo sem medo (é seguro repetir).
 

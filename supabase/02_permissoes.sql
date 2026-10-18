@@ -133,6 +133,9 @@ begin
   -- 14. Sistemas (links externos): todos menos vigilante, maqueiro e ASG
   perform public._dar('sistemas', 'ver', gestores || adms || assistenc);
 
+  -- 15. Painel do Gestor (adesão ao sistema e registro de ações): só gestores
+  perform public._dar('painel', 'ver', gestores);
+
   -- 16. Chat: todos
   perform public._dar('chat', 'ver', todos);
 end

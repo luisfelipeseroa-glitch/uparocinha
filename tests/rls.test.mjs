@@ -31,11 +31,11 @@ await db.exec(`
   alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
   grant all on all tables in schema storage to authenticated;
 `);
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar', f, '→', e.message); process.exit(1); }
 }
 // rodar duas vezes tem que funcionar (idempotente)
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar de novo', f, '→', e.message); process.exit(1); }
 }
 
@@ -117,6 +117,7 @@ const regras = [
   ['12. Safety Huddle: todos',                       'safety', 'ver',     TODOS],
   ['13. Manutenção: todos + terceiros abrem chamado','manutencao', 'criar', [...TODOS, ...T]],
   ['14. Sistemas: todos menos vig, maq e higienização','sistemas', 'ver', [...G, ...A, ...S]],
+  ['15. Painel do gestor: só gestores',              'painel', 'ver',     G],
   ['16. Chat: todos',                                'chat', 'ver',       TODOS],
 ];
 for (const [desc, mod, acao, quem] of regras) {
@@ -368,6 +369,29 @@ ok((await tenta('Gestor Administrativo', `update public.profiles set funcao='Ges
 ok((await tenta('Gestor Administrativo', `delete from public.permissoes`)).n === 0, 'ninguém altera a matriz pelo site');
 ok(!(await tenta('Enfermeiro', `insert into public.profiles (id, matricula, nome, funcao) values (gen_random_uuid(),'9','x','Médico')`)).ok, 'ninguém cria perfil pelo site');
 ok((await tenta('Enfermeiro', `select public.marcar_senha_trocada()`)).ok && (await tenta('Enfermeiro', `select trocar_senha from public.profiles where matricula='1010'`)).rows.length >= 0, 'marcar senha trocada funciona');
+
+// ---- Painel do gestor: adesão, registro de ações, troca → escala
+ok(!(await tenta('Enfermeiro', `select * from public.adesao_resumo()`)).ok, 'enfermeiro NÃO vê a adesão');
+ok(!(await tenta('Vigilante', `select * from public.adesao_pendentes()`)).ok, 'vigilante NÃO vê quem não entrou');
+const ad = await tenta('Gestor Assistencial', `select * from public.adesao_resumo()`);
+ok(ad.ok && ad.rows.length > 5 && ad.rows.every(r => Number(r.entraram) <= Number(r.total)), 'gestor vê a adesão por função');
+ok((await tenta('Gestor Assistencial', `select * from public.adesao_pendentes()`)).ok, 'gestor vê quem ainda não entrou');
+ok(!(await tenta('Médico', `select public.registrar_acesso('apagar_tudo')`)).ok, 'registrar_acesso recusa ação inventada');
+ok((await tenta('Médico', `select public.registrar_acesso('login')`)).ok, 'login é registrado');
+ok(await lerN(`select * from public.auditoria`, 'Médico') === 0, 'médico NÃO lê o registro de ações');
+ok(await lerN(`select * from public.auditoria where tipo='acesso'`, 'Gestor Assistencial') >= 1, 'gestor lê o registro de acessos');
+ok(await lerN(`select * from public.auditoria where tipo='acao' and tabela='rh_solicitacoes' and usuario_nome is not null`, 'RH Focal') >= 3, 'ações do RH ficam registradas com o nome');
+ok(!(await tenta('Gestor Assistencial', `insert into public.auditoria (tipo, acao) values ('acao','x')`)).ok, 'ninguém grava o registro direto');
+ok((await tenta('Gestor Assistencial', `delete from public.auditoria`)).n === 0, 'ninguém apaga o registro');
+// troca autorizada muda a escala
+await db.exec(`reset role`);
+await db.exec(`insert into public.escala_plantao (data, turno, setor, nome) values ('2030-01-10','manha','ENF','Teste Enfermeiro'), ('2030-01-15','tarde','ENF','Teste Enfermeiro 2')`);
+const rt = await tenta('Enfermeiro', `insert into public.rh_solicitacoes (tipo, profissao, setor, dados, assinatura, segundo_nome, segundo_matricula) values ('troca','x','y','{"dataOrigem":"2030-01-10","turnoOrigem":"Manhã","dataDest":"2030-01-15","turnoDest":"Tarde"}'::jsonb,'sig','Teste Enfermeiro 2','2001') returning id`);
+ok(rt.ok, 'troca para a escala é aberta');
+await tenta('Enfermeiro2', `select public.rh_colega_assinar($1::uuid, $2)`, [rt.rows[0].id, 'x'.repeat(60)]);
+await tenta('Gestor Assistencial', `select public.rh_decidir($1::uuid, true, null, 'assin')`, [rt.rows[0].id]);
+const esc = (await db.query(`select data::text d, nome from public.escala_plantao where data in ('2030-01-10','2030-01-15') order by data`)).rows;
+ok(esc[0].nome === 'Teste Enfermeiro 2' && esc[1].nome === 'Teste Enfermeiro', 'troca autorizada troca os nomes na escala');
 
 console.log(`\n${total - falhas}/${total} verificações passaram.`);
 process.exit(falhas ? 1 : 0);

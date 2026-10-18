@@ -307,6 +307,7 @@
       }
       document.getElementById('inp-senha').value = '';
       await iniciarSessao();
+      try { window.sb.rpc('registrar_acesso', { p_acao: 'login' }); } catch (e) { /* segue */ }
     } catch (e) {
       msgLogin('Não foi possível entrar agora. Tente novamente.');
     } finally {
@@ -364,6 +365,7 @@
               const r = await window.sb.auth.updateUser({ password: a });
               if (r.error) { UPA.toast(/same|different/i.test(r.error.message) ? 'Escolha uma senha diferente da atual.' : 'Não foi possível salvar a senha.', 'erro'); return false; }
               await window.sb.rpc('marcar_senha_trocada');
+              try { window.sb.rpc('registrar_acesso', { p_acao: 'senha_trocada' }); } catch (e) { /* segue */ }
               UPA.ctx.trocar_senha = false;
               UPA.toast('Senha alterada com sucesso.');
               res(true);

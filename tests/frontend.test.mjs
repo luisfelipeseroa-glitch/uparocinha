@@ -43,6 +43,7 @@ const esperado = (f) => {
   if (T.includes(f)) return ['manutencao'];
   if (f === 'Agente Regulador') return [];
   const e = ['avisos', 'estoque', 'documentos', 'escala', 'evento', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao'];
+  if (G.includes(f)) e.push('painel');
   if ([...G, 'Enfermeiro', 'Técnico de Enfermagem', 'Médico', 'Pediatra', 'Farmacêutico'].includes(f)) e.push('calculadoras');
   if ([...G, 'Enfermeiro', 'Técnico de Enfermagem', 'Médico', 'Pediatra'].includes(f)) e.push('dieta');
   if ([...G, ...A, ...S].includes(f)) e.push('passagem', 'sistemas');
@@ -72,6 +73,7 @@ const fix = {
     { ...base, id: 2, data_huddle: '2026-10-17', turno: 'tarde', ident: { nome: 'Ana', cargo: 'Enfermeiro' }, respostas: { eq1: 'sim', pa1: 'nao', po2: '30-60', nir_am: 3 }, resumo: 'Plantão tranquilo', foto_path: 'u/foto.jpg' }],
   manutencao_chamados: [{ ...base, setor: 'Farmácia', categoria: 'Elétrica', descricao: 'Lâmpada queimada', prioridade: 'media', status: 'aberto' }],
   profiles: [{ matricula: '1', nome: 'Fulano', funcao: 'Médico' }],
+  auditoria: [{ id: 1, em: agora, usuario_nome: 'Ana', usuario_matricula: '9', tipo: 'acao', acao: 'insert', tabela: 'rh_solicitacoes', registro: 'abc' }, { id: 2, em: agora, usuario_nome: 'Bia', usuario_matricula: '8', tipo: 'acesso', acao: 'login', tabela: null, registro: null }],
 };
 
 function criarCliente(ctx, log) {
@@ -93,13 +95,13 @@ function criarCliente(ctx, log) {
       signOut: async () => ({ error: null }), updateUser: async () => ({ error: null }),
     },
     from: consulta,
-    rpc: async (nome, args) => { log.push(['rpc', nome, args]); return nome === 'meu_contexto' ? { data: ctx, error: null } : { data: nome === 'treinamento_prova' ? [] : null, error: null }; },
+    rpc: async (nome, args) => { log.push(['rpc', nome, args]); if (nome === 'adesao_resumo') return { data: [{ funcao: 'Enfermeiro', grupo: 'assistencial', total: 10, entraram: 4 }, { funcao: 'Vigilante', grupo: 'apoio', total: 5, entraram: 5 }], error: null }; if (nome === 'adesao_pendentes') return { data: [{ matricula: '77', nome: 'Fulana Pendente', funcao: 'Enfermeiro' }], error: null }; return nome === 'meu_contexto' ? { data: ctx, error: null } : { data: nome === 'treinamento_prova' ? [] : null, error: null }; },
     storage: { from: () => ({ upload: async () => ({ error: null }), createSignedUrl: async () => ({ data: { signedUrl: 'http://x/y' }, error: null }), remove: async () => ({}) }) },
   };
 }
 
-const ARQUIVOS = ['js/config.js', 'js/core.js', 'js/legacy.js', 'js/forms.js',
-  ...['avisos', 'estoque', 'clinico', 'dieta', 'documentos', 'escala', 'evento', 'passagem', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao', 'sistemas'].map((x) => `js/mod-${x}.js`)];
+const ARQUIVOS = ['js/config.js', 'js/core.js', 'js/legacy.js', 'js/forms.js', 'js/pendencias.js', 'js/pwa.js',
+  ...['avisos', 'estoque', 'clinico', 'dieta', 'documentos', 'escala', 'evento', 'passagem', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao', 'sistemas', 'painel'].map((x) => `js/mod-${x}.js`)];
 const html = ler('index.html').replace(/<script[\s\S]*?<\/script>/g, '');
 const espera = (ms = 30) => new Promise((r) => setTimeout(r, ms));
 
@@ -324,6 +326,38 @@ await botoes('Gestor Assistencial', 'avisos', '#av-novo', true, 'Novo aviso');
   d.getElementById('ev-form').dispatchEvent(new w.Event('submit', { cancelable: true })); await espera(60);
   ok(log.some((l) => l[1] === 'evento_notificar' && l[2].p_dados.anonimo === true), 'evento enviado por RPC');
   ok(!log.some((l) => l[0] === 'eventos_adversos'), 'evento nunca grava direto na tabela');
+  w.close();
+}
+
+// ---------- painel do gestor, pendências, relatórios novos, app instalável
+{
+  const { w } = await abrir('Gestor Assistencial');
+  await espera(150);
+  const d = w.document;
+  ok(d.getElementById('home-pendencias').style.display === 'block' && /autoriza/i.test(d.getElementById('home-pendencias').textContent), 'gestor vê o aviso de autorização pendente na Home');
+  ok(!!d.querySelector('.module-btn[data-mod=rh] .selo'), 'botão do RH ganha a bolinha de pendência');
+  w.UPA.go('painel'); await espera(150);
+  ok(/40%/.test(d.getElementById('mod-body').textContent) && /Fulana Pendente/.test(d.getElementById('mod-body').textContent), 'painel mostra adesão (40%) e quem não entrou');
+  d.querySelector('[data-aba=registro]').click(); await espera(100);
+  ok(/Ana/.test(d.getElementById('mod-body').textContent) && /incluiu/.test(d.getElementById('mod-body').textContent) && /entrou no sistema/.test(d.getElementById('mod-body').textContent), 'painel mostra o registro de ações');
+  w.UPA.go('safety'); await espera(120);
+  d.getElementById('sh-rel').click(); await espera(120);
+  ok(/huddles no mês/.test(d.getElementById('mod-body').textContent) && !!d.getElementById('shr-xls'), 'relatório mensal do Huddle abre');
+  w.UPA.go('manutencao'); await espera(120);
+  d.querySelector('[data-aba=ind]').click(); await espera(120);
+  ok(/tempo médio até concluir/.test(d.getElementById('mod-body').textContent), 'indicadores da Manutenção abrem');
+  w.close();
+}
+{
+  const { w } = await abrir('Enfermeiro');
+  await espera(150);
+  ok(!w.document.querySelector('#sidebar-nav [data-mod=painel]'), 'enfermeiro NÃO vê o Painel do Gestor');
+  ok(!w.document.getElementById('sh-rel'), 'enfermeiro sem botão do relatório (só ao entrar em Safety)');
+  w.UPA.go('safety'); await espera(120);
+  ok(!w.document.getElementById('sh-rel'), 'enfermeiro NÃO vê o relatório mensal do Huddle');
+  w.UPA.go('manutencao'); await espera(100);
+  ok(!w.document.querySelector('[data-aba=ind]'), 'enfermeiro NÃO vê os indicadores de Manutenção');
+  ok(w.document.getElementById('btn-instalar') && w.UPA.instalar, 'botão de instalar o app existe');
   w.close();
 }
 

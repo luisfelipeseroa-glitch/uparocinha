@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1A6FC4">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%231A6FC4'/%3E%3Ctext x='96' y='72' font-family='Arial Black,sans-serif' font-size='48' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='middle'%3EUPA%3C/text%3E%3Crect x='76' y='90' width='40' height='8' rx='4' fill='white'/%3E%3Crect x='92' y='78' width='8' height='32' rx='4' fill='white'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%231A6FC4'/%3E%3Ctext x='96' y='72' font-family='Arial Black,sans-serif' font-size='48' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='middle'%3EUPA%3C/text%3E%3Crect x='76' y='90' width='40' height='8' rx='4' fill='white'/%3E%3Crect x='92' y='78' width='8' height='32' rx='4' fill='white'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="UPA Rocinha">
@@ -62,7 +62,7 @@
   .badge-cargo { background:var(--green); color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; white-space:nowrap; max-width:150px; overflow:hidden; text-overflow:ellipsis; }
   .user-avatar { width:36px; height:36px; background:linear-gradient(135deg,var(--blue-main),var(--blue-dark)); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:12px; cursor:pointer; position:relative; flex-shrink:0; }
   .user-name-top { font-size:13px; font-weight:700; color:var(--gray-700); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .user-dropdown { position:absolute; top:calc(100% + 8px); right:0; background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); width:160px; overflow:hidden; display:none; z-index:300; }
+  .user-dropdown { position:absolute; top:calc(100% + 8px); right:0; background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-sm); box-shadow:var(--shadow-lg); width:170px; overflow:hidden; display:none; z-index:300; }
   .user-dropdown.open { display:block; }
   .user-dropdown button { width:100%; padding:11px 16px; background:none; border:none; font-family:var(--font); font-size:13px; font-weight:600; color:#B91C1C; display:flex; align-items:center; gap:8px; cursor:pointer; }
   .user-dropdown button:hover { background:#FEE2E2; }
@@ -114,6 +114,20 @@
 
   /* MODULES GRID */
   .modules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:10px; margin-bottom:20px; }
+
+  .tb { width:100%; border-collapse:collapse; font-size:13px; }
+  .tb th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--gray-500); padding:8px 10px; border-bottom:2px solid var(--gray-200); }
+  .tb td { padding:8px 10px; border-bottom:1px solid var(--gray-100); vertical-align:middle; }
+  /* avisos de pendência (Home) e bolinha nos módulos */
+  #home-pendencias { background:#FFF7ED; border:1.5px solid #FDBA74; border-radius:12px; padding:10px 12px; margin-bottom:14px; }
+  #home-pendencias .pend-titulo { font-size:12px; font-weight:800; color:#C2410C; text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; }
+  #home-pendencias .pend { display:flex; align-items:center; gap:10px; width:100%; background:#fff; border:1px solid #FED7AA; border-radius:8px; padding:8px 10px; margin-top:6px; cursor:pointer; font-family:var(--font); text-align:left; }
+  #home-pendencias .pend:hover { border-color:#F97316; }
+  #home-pendencias .pend-n { background:#EA580C; color:#fff; font-weight:800; font-size:12px; min-width:24px; height:24px; border-radius:12px; display:flex; align-items:center; justify-content:center; padding:0 6px; flex-shrink:0; }
+  #home-pendencias .pend-t { flex:1; font-size:13px; font-weight:700; color:var(--gray-800); }
+  #home-pendencias .pend-go { font-size:12px; font-weight:700; color:#C2410C; white-space:nowrap; }
+  .selo { position:absolute; top:6px; right:8px; background:#EF4444; color:#fff; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:9px; padding:0 4px; display:flex; align-items:center; justify-content:center; border:2px solid #fff; z-index:2; }
+  .nav-item .selo { top:4px; left:34px; right:auto; }
   .module-btn { background:var(--white); border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:14px 10px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; transition:transform .15s,border-color .15s,box-shadow .15s; text-align:center; position:relative; overflow:hidden; }
   .module-btn::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,var(--blue-main),var(--blue-light)); opacity:0; transition:opacity .2s; }
   .module-btn:hover { transform:translateY(-2px); border-color:var(--blue-main); box-shadow:var(--shadow-md); }
@@ -377,6 +391,7 @@
         <span id="avatar-initials">??</span>
         <div class="user-dropdown" id="user-dropdown">
           <button style="color:var(--gray-700)" onclick="event.stopPropagation();document.getElementById('user-dropdown').classList.remove('open');UPA.trocarSenha(false)"><i class="fas fa-key"></i>Alterar senha</button>
+          <button id="btn-instalar" style="color:var(--gray-700);display:none" onclick="event.stopPropagation();document.getElementById('user-dropdown').classList.remove('open');UPA.instalar()"><i class="fas fa-download"></i>Instalar app</button>
           <button onclick="doLogout()"><i class="fas fa-right-from-bracket"></i>Sair</button>
         </div>
       </div>
@@ -404,6 +419,7 @@
     <div id="home-view">
       <div class="content-grid">
         <div class="left-panel">
+          <div id="home-pendencias" style="display:none"></div>
           <div class="section-title">Módulos do Sistema</div>
           <div class="modules-grid" id="modules-grid"></div>
         </div>
@@ -540,6 +556,8 @@
 <script src="js/core.js"></script>
 <script src="js/legacy.js"></script>
 <script src="js/forms.js"></script>
+<script src="js/pendencias.js"></script>
+<script src="js/pwa.js"></script>
 <script src="js/mod-avisos.js"></script>
 <script src="js/mod-estoque.js"></script>
 <script src="js/mod-clinico.js"></script>
@@ -554,6 +572,7 @@
 <script src="js/mod-safety.js"></script>
 <script src="js/mod-manutencao.js"></script>
 <script src="js/mod-sistemas.js"></script>
+<script src="js/mod-painel.js"></script>
 <script src="js/boot.js"></script>
 </body>
 </html>
