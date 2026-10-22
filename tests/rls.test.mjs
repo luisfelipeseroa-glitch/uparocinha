@@ -31,11 +31,11 @@ await db.exec(`
   alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
   grant all on all tables in schema storage to authenticated;
 `);
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar', f, '→', e.message); process.exit(1); }
 }
 // rodar duas vezes tem que funcionar (idempotente)
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar de novo', f, '→', e.message); process.exit(1); }
 }
 
@@ -321,7 +321,7 @@ const cid = rc.rows[0].id;
 ok(!(await tenta('Enfermeiro', `insert into public.treinamentos (titulo) values ('x')`)).ok, 'enfermeiro NÃO cria treinamento');
 await tenta('Gestor Assistencial', `insert into public.treinamento_questoes (treinamento_id, ordem, enunciado, opcoes, correta) values ($1,1,'Quando higienizar?','["Nunca","Antes e depois"]'::jsonb,1),($1,2,'Quanto tempo?','["10s","40-60s"]'::jsonb,1)`, [cid]);
 ok(await lerN(`select * from public.treinamento_questoes`, 'Enfermeiro') === 0, 'enfermeiro NÃO enxerga o gabarito');
-ok(await lerN(`select * from public.treinamento_questoes`, 'Gestor Assistencial') === 2, 'gestor vê as questões');
+ok(await lerN(`select * from public.treinamento_questoes where treinamento_id = ${cid}`, 'Gestor Assistencial') === 2, 'gestor vê as questões');
 const prova = (await tenta('Vigilante', `select public.treinamento_prova($1) as p`, [cid])).rows[0].p;
 ok(prova.length === 2 && !JSON.stringify(prova).includes('correta'), 'a prova entregue ao colaborador não traz o gabarito');
 const reprov = (await tenta('Vigilante', `select public.treinamento_responder($1, '{"1":0,"2":1}'::jsonb) as r`, [cid])).rows[0].r;
@@ -392,6 +392,23 @@ await tenta('Enfermeiro2', `select public.rh_colega_assinar($1::uuid, $2)`, [rt.
 await tenta('Gestor Assistencial', `select public.rh_decidir($1::uuid, true, null, 'assin')`, [rt.rows[0].id]);
 const esc = (await db.query(`select data::text d, nome from public.escala_plantao where data in ('2030-01-10','2030-01-15') order by data`)).rows;
 ok(esc[0].nome === 'Teste Enfermeiro 2' && esc[1].nome === 'Teste Enfermeiro', 'troca autorizada troca os nomes na escala');
+
+// ---- Cursos iniciais (06_cursos.sql)
+await db.exec(`reset role`);
+const nc = (await db.query(`select count(*)::int n from public.treinamentos`)).rows[0].n;
+const nqq = (await db.query(`select count(*)::int n from public.treinamento_questoes`)).rows[0].n;
+ok(nc === 43, 'cursos iniciais (42) + 1 de teste, sem duplicar ao rodar duas vezes: ' + nc);
+ok(nqq >= 120, 'cada curso tem prova: ' + nqq);
+ok((await db.query(`select 1 from public.treinamentos t where not exists (select 1 from public.treinamento_questoes q where q.treinamento_id = t.id) limit 1`)).rows.length === 0, 'nenhum curso sem questões');
+ok((await db.query(`select 1 from public.treinamento_questoes where correta >= jsonb_array_length(opcoes) limit 1`)).rows.length === 0, 'gabarito dentro das alternativas');
+const funcsOk = ['Médico','Pediatra','Enfermeiro','Técnico de Enfermagem','Farmacêutico','Técnico de Farmácia','Radiologista','Técnico de Radiologia','Técnico em Laboratório','Assistente Social','Recepcionista','Assistente Administrativo','Almoxarife','NIR','TI','ASG','Vigilante','Maqueiro'];
+for (const f of funcsOk) ok((await db.query(`select count(*)::int n from public.treinamentos where $1 = any(funcoes)`, [f])).rows[0].n === 2, 'dois cursos para ' + f);
+ok((await db.query(`select count(*)::int n from public.treinamentos where funcoes = '{}' and carga_horaria is not null and obrigatorio`)).rows[0].n === 6, 'seis cursos para todas as funções');
+// o enfermeiro faz a prova de um curso e passa com as respostas certas
+const cursoIni = (await db.query(`select id from public.treinamentos where titulo like 'Higienização das mãos%'`)).rows[0].id;
+const gab = (await db.query(`select jsonb_object_agg(ordem::text, correta) g from public.treinamento_questoes where treinamento_id = $1`, [cursoIni])).rows[0].g;
+const rr = await tenta('Enfermeiro', `select public.treinamento_responder($1, $2::jsonb) r`, [cursoIni, JSON.stringify(gab)]);
+ok(rr.ok && rr.rows[0].r.aprovado === true && rr.rows[0].r.nota === 100, 'prova de curso inicial: respostas certas aprovam com 100%');
 
 console.log(`\n${total - falhas}/${total} verificações passaram.`);
 process.exit(falhas ? 1 : 0);
