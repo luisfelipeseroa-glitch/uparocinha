@@ -34,11 +34,11 @@ await db.exec(`
   alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
   grant all on all tables in schema storage to authenticated;
 `);
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql', '09_ouvidoria.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar', f, '→', e.message); process.exit(1); }
 }
 // rodar duas vezes tem que funcionar (idempotente)
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql', '09_ouvidoria.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar de novo', f, '→', e.message); process.exit(1); }
 }
 
@@ -122,6 +122,10 @@ const regras = [
   ['14. Sistemas: todos menos vig, maq e higienização','sistemas', 'ver', [...G, ...A, ...S]],
   ['15. Painel do gestor: só gestores',              'painel', 'ver',     G],
   ['15. Painel: só o Gestor Administrativo redefine senhas', 'painel', 'editar', ['Gestor Administrativo']],
+  ['17. Ouvidorias: só os 3 gestores veem',          'ouvidoria', 'ver',     G],
+  ['17. Ouvidorias: só os 3 gestores criam',         'ouvidoria', 'criar',   G],
+  ['17. Ouvidorias: só os 3 gestores editam',        'ouvidoria', 'editar',  G],
+  ['17. Ouvidorias: só o Gestor Administrativo exclui','ouvidoria', 'excluir', ['Gestor Administrativo']],
   ['16. Chat: todos',                                'chat', 'ver',       TODOS],
 ];
 for (const [desc, mod, acao, quem] of regras) {
@@ -454,6 +458,32 @@ ok(c2.ok && c2.rows[0].r.versao === 2 && c2.rows[0].r.nova === true, 'nova confi
 ok(!(await tenta('Gestor Assistencial', `insert into public.escala_confirmacoes (data, turno, versao, hash, total) values ('2031-03-01','manha',9,'x',1)`)).ok, 'ninguém grava confirmação direto na tabela');
 ok(!(await tenta('Gestor Assistencial', `update public.escala_confirmacoes set versao = 99`)).ok || (await tenta('Gestor Assistencial', `update public.escala_confirmacoes set versao = 99`)).n === 0, 'ninguém altera confirmação');
 ok((await lerN(`select * from public.escala_confirmacoes`, 'Vigilante')) >= 2, 'todos que veem a escala veem as confirmações');
+
+// ---- Ouvidorias (09_ouvidoria.sql): controle interno, só gestores, sem dados pessoais
+await db.exec(`reset role`);
+const OUV = (prot, prov = 'Orientada a equipe e revisado o fluxo de acolhimento', extra = '') => `insert into public.ouvidorias (protocolo, data_manifestacao, categoria, coordenacao, providencia, prazo${extra ? ', ' + extra.split('=')[0] : ''}) values ('${prot}', '2031-04-01', 'Tempo de espera', 'Coordenação Assistencial', '${prov}', '2031-04-20'${extra ? ", '" + extra.split('=')[1] + "'" : ''}) returning id`;
+ok((await tenta('Gestor Assistencial', OUV('1746-0001'))).ok, 'gestor registra uma ouvidoria');
+ok((await tenta('RH Focal', OUV('1746-0002'))).ok, 'RH Focal registra uma ouvidoria');
+for (const f of ['Enfermeiro', 'Médico', 'Recepcionista', 'Almoxarife', 'Vigilante', 'TI']) {
+  ok(!(await tenta(f, OUV('X-' + f.slice(0, 3) + '-1'))).ok, f + ' NÃO registra ouvidoria');
+  ok(await lerN(`select * from public.ouvidorias`, f) === 0, f + ' NÃO enxerga ouvidorias');
+}
+ok(await lerN(`select * from public.ouvidorias`, 'Gestor Administrativo') === 2, 'gestor administrativo enxerga as ouvidorias');
+ok(!(await tenta('anon', `select * from public.ouvidorias`)).ok || (await lerN(`select * from public.ouvidorias`, 'anon')) === 0, 'anônimo NÃO enxerga ouvidorias');
+ok(!(await tenta('Gestor Assistencial', OUV('1746-0001'))).ok, 'protocolo repetido é recusado');
+ok(!(await tenta('Gestor Assistencial', OUV('ab c', 'Orientada a equipe e revisado o fluxo'))).ok, 'protocolo com espaço/curto é recusado');
+ok(!(await tenta('Gestor Assistencial', OUV('1746-0010', 'Paciente CPF 123.456.789-09 reclamou'))).ok, 'providência com CPF é recusada');
+ok(!(await tenta('Gestor Assistencial', OUV('1746-0011', 'Ligar para 21 99999-8888 e orientar'))).ok, 'providência com telefone é recusada');
+ok(!(await tenta('Gestor Assistencial', OUV('1746-0012', 'Responder para maria@email.com amanhã'))).ok, 'providência com e-mail é recusada');
+ok(!(await tenta('Gestor Assistencial', OUV('1746-0013', 'ok'))).ok, 'providência curtíssima é recusada');
+ok(!(await tenta('Gestor Assistencial', `insert into public.ouvidorias (protocolo, data_manifestacao, categoria, coordenacao, providencia, prazo) values ('1746-0014','2031-04-10','Tempo de espera','Coordenação Assistencial','Providência válida aqui','2031-04-01')`)).ok, 'prazo antes da data da manifestação é recusado');
+ok(!(await tenta('Gestor Assistencial', OUV('1746-0015', 'Providência válida aqui', 'situacao=inventada'))).ok, 'situação fora da lista é recusada');
+ok((await tenta('Gestor Assistencial', `update public.ouvidorias set situacao = 'concluida' where protocolo = '1746-0001'`)).n === 1, 'gestor atualiza a situação');
+ok((await tenta('Enfermeiro', `update public.ouvidorias set situacao = 'concluida'`)).n === 0, 'enfermeiro NÃO atualiza ouvidoria');
+ok((await tenta('Gestor Assistencial', `delete from public.ouvidorias where protocolo = '1746-0002'`)).n === 0, 'gestor assistencial NÃO exclui');
+ok((await tenta('Gestor Administrativo', `delete from public.ouvidorias where protocolo = '1746-0002'`)).n === 1, 'gestor administrativo exclui');
+ok((await db.query(`select count(*)::int n from public.auditoria where tabela = 'ouvidorias'`)).rows[0].n >= 3, 'ações em ouvidorias ficam no registro (quem e quando)');
+ok(!(await db.query(`select * from public.auditoria where tabela = 'ouvidorias'`)).rows.some(r => JSON.stringify(r).includes('acolhimento')), 'o registro de ações NÃO guarda o texto da providência');
 
 console.log(`\n${total - falhas}/${total} verificações passaram.`);
 process.exit(falhas ? 1 : 0);

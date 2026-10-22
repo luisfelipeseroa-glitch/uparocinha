@@ -4,7 +4,7 @@
   const U = window.UPA, esc = U.esc;
   const GRUPOS = { gestor: 'Gestão', adm: 'Administrativo', assistencial: 'Assistencial', apoio: 'Apoio', terceiro: 'Terceiros', sem_acesso: 'Sem acesso' };
   const ACOES = { insert: 'incluiu', update: 'alterou', delete: 'excluiu', login: 'entrou no sistema', senha_trocada: 'trocou a senha', senha_redefinida: 'redefiniu a senha de um colega' };
-  const TABELAS = { avisos: 'Avisos', estoque_itens: 'Estoque', documentos: 'Documentos', escala_plantao: 'Escala', eventos_adversos: 'Evento Adverso', passagem_cards: 'Passagem de Plantão', dieta_pedidos: 'Dieta', indicadores_mensais: 'Relatório Gerencial', rh_solicitacoes: 'RH', treinamentos: 'Treinamento', safety_huddles: 'Safety Huddle', manutencao_chamados: 'Manutenção' };
+  const TABELAS = { avisos: 'Avisos', estoque_itens: 'Estoque', documentos: 'Documentos', escala_plantao: 'Escala', eventos_adversos: 'Evento Adverso', passagem_cards: 'Passagem de Plantão', dieta_pedidos: 'Dieta', indicadores_mensais: 'Relatório Gerencial', rh_solicitacoes: 'RH', treinamentos: 'Treinamento', safety_huddles: 'Safety Huddle', manutencao_chamados: 'Manutenção', ouvidorias: 'Ouvidorias' };
 
   async function adesao(el) {
     const [res, pend] = await Promise.all([U.db(window.sb.rpc('adesao_resumo')), U.db(window.sb.rpc('adesao_pendentes'))]);

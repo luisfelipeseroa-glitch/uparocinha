@@ -43,7 +43,7 @@ const esperado = (f) => {
   if (T.includes(f)) return ['manutencao'];
   if (f === 'Agente Regulador') return [];
   const e = ['avisos', 'estoque', 'documentos', 'escala', 'evento', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao'];
-  if (G.includes(f)) e.push('painel');
+  if (G.includes(f)) e.push('painel', 'ouvidoria');
   if ([...G, 'Enfermeiro', 'Técnico de Enfermagem', 'Médico', 'Pediatra', 'Farmacêutico'].includes(f)) e.push('calculadoras');
   if ([...G, 'Enfermeiro', 'Técnico de Enfermagem', 'Médico', 'Pediatra'].includes(f)) e.push('dieta');
   if ([...G, ...A, ...S].includes(f)) e.push('passagem', 'sistemas');
@@ -60,6 +60,7 @@ const fix = {
   estoque_log: [{ id: 1, setor: 'farmacia', insumo: 'Dipirona', acao: 'edicao', qtd_antes: 1, qtd_depois: 10, usuario_nome: 'A', em: agora }],
   documentos: [{ ...base, tipo: 'POP', assunto: 'POP Sepse', status: 'Ativo', link: 'https://x.y', arquivo_path: null }],
   escala_confirmacoes: [],
+  ouvidorias: [{ ...base, id: 1, protocolo: '1746-0001', data_manifestacao: '2026-10-01', categoria: 'Tempo de espera', coordenacao: 'Coordenação Assistencial', providencia: 'Revisado o fluxo de classificação', prazo: '2026-10-05', situacao: 'pendente' }, { ...base, id: 2, protocolo: '1746-0002', data_manifestacao: '2026-10-02', categoria: 'Elogio', coordenacao: 'Coordenação Administrativa', providencia: 'Elogio repassado à equipe', prazo: '2099-01-01', situacao: 'concluida' }],
   escala_plantao: [{ ...base, data: '2026-10-16', turno: 'manha', setor: 'Médico', nome: 'Dra. Ana', observacao: null }],
   eventos_adversos: [{ ...base, data_evento: '2026-10-15', hora_evento: '10:00:00', setor: 'Sala Vermelha', local_evento: null, tipo: 'Queda', grau: 'leve', descricao: 'Paciente caiu da maca', status: 'nova', anonimo: true }],
   passagem_cards: [{ ...base, id: 'u1', turno: 'manha', paciente: 'João', leito: '3', diagnostico: 'IAM', prioridade: 'critico', pendencia: 'ECG', recebido_em: null }],
@@ -81,7 +82,7 @@ function criarCliente(ctx, log) {
   const consulta = (tabela) => {
     const st = { op: 'select', single: false };
     const b = {
-      select() { return b; }, eq() { return b; }, gte() { return b; }, lt() { return b; }, lte() { return b; }, order() { return b; }, limit() { return b; },
+      select() { return b; }, eq() { return b; }, in() { return b; }, gte() { return b; }, lt() { return b; }, lte() { return b; }, order() { return b; }, limit() { return b; },
       insert(v) { st.op = 'insert'; log.push([tabela, 'insert', v]); return b; }, update(v) { st.op = 'update'; log.push([tabela, 'update', v]); return b; },
       upsert(v) { st.op = 'upsert'; log.push([tabela, 'upsert', v]); return b; }, delete() { st.op = 'delete'; log.push([tabela, 'delete']); return b; },
       single() { st.single = true; return b; },
@@ -102,7 +103,7 @@ function criarCliente(ctx, log) {
 }
 
 const ARQUIVOS = ['js/config.js', 'js/core.js', 'js/legacy.js', 'js/forms.js', 'js/pendencias.js', 'js/pwa.js',
-  ...['avisos', 'estoque', 'clinico', 'dieta', 'documentos', 'escala', 'evento', 'passagem', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao', 'sistemas', 'painel'].map((x) => `js/mod-${x}.js`)];
+  ...['avisos', 'estoque', 'clinico', 'dieta', 'documentos', 'escala', 'evento', 'passagem', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao', 'sistemas', 'ouvidoria', 'painel'].map((x) => `js/mod-${x}.js`)];
 const html = ler('index.html').replace(/<script[\s\S]*?<\/script>/g, '');
 const espera = (ms = 30) => new Promise((r) => setTimeout(r, ms));
 
@@ -349,6 +350,52 @@ await botoes('Gestor Assistencial', 'avisos', '#av-novo', true, 'Novo aviso');
   ok(/tempo médio até concluir/.test(d.getElementById('mod-body').textContent), 'indicadores da Manutenção abrem');
   w.close();
 }
+// ---------- ouvidorias (controle interno, só gestores)
+{
+  const { w, log } = await abrir('Gestor Assistencial');
+  await espera(150);
+  const d = w.document;
+  ok(!!d.querySelector('#sidebar-nav [data-mod=ouvidoria]'), 'gestor vê o módulo Ouvidorias');
+  ok(/prazo vencido/.test(d.getElementById('home-pendencias').textContent), 'Home avisa ação de ouvidoria com prazo vencido');
+  w.UPA.go('ouvidoria'); await espera(150);
+  const corpo = d.getElementById('mod-body');
+  ok(/1746-0001/.test(corpo.textContent) && !/1746-0002/.test(corpo.textContent), 'lista em aberto mostra o pendente e esconde o concluído');
+  ok(/vencido há/.test(corpo.textContent), 'marca o prazo vencido');
+  ok(/Não substitui o 1746|continuam na plataforma 1746/.test(corpo.textContent), 'avisa que não substitui o 1746');
+  ok(!/Paciente|paciente/.test(d.querySelector('#ou-novo').closest('.barra').outerHTML), 'tela não pede dados de paciente');
+  d.getElementById('ou-novo').click(); await espera(60);
+  const val = (n, v) => { const e = d.getElementById('f_' + n); e.value = v; };
+  val('protocolo', 'ab c'); val('categoria', 'Elogio'); val('coordenacao', 'RH Focal'); val('providencia', 'Ação válida aqui'); val('prazo', '2026-12-01');
+  const salvar = () => [...d.querySelectorAll('.upa-modal button')].find(b => b.textContent === 'Salvar');
+  salvar().click(); await espera(60);
+  ok(!log.some(l => l[0] === 'ouvidorias' && l[1] === 'insert'), 'protocolo inválido não é enviado');
+  val('protocolo', '1746-0099'); val('providencia', 'Ligar 21 99999-8888 para orientar');
+  salvar().click(); await espera(60);
+  ok(!log.some(l => l[0] === 'ouvidorias' && l[1] === 'insert'), 'providência com telefone não é enviada');
+  val('providencia', 'Orientada a equipe da recepção'); val('prazo', '2026-09-01');
+  salvar().click(); await espera(60);
+  ok(!log.some(l => l[0] === 'ouvidorias' && l[1] === 'insert'), 'prazo antes da data da manifestação não é enviado');
+  val('prazo', '2026-12-01'); salvar().click(); await espera(120);
+  ok(log.some(l => l[0] === 'ouvidorias' && l[1] === 'insert' && l[2].protocolo === '1746-0099' && l[2].coordenacao === 'RH Focal' && Object.keys(l[2]).sort().join() === 'categoria,coordenacao,data_manifestacao,prazo,protocolo,providencia,situacao'), 'envia só os 7 campos permitidos');
+  d.querySelector('[data-aba=res]').click(); await espera(100);
+  ok(/Por coordenação/.test(d.getElementById('mod-body').textContent) && /Tempo de espera/.test(d.getElementById('mod-body').textContent), 'aba Resumo mostra por coordenação e categoria');
+  ok(!d.querySelector('[data-ex]'), 'gestor assistencial não vê botão de excluir');
+  w.close();
+}
+{
+  const { w } = await abrir('Gestor Administrativo');
+  await espera(150);
+  w.UPA.go('ouvidoria'); await espera(150);
+  ok(!!w.document.querySelector('[data-ex]'), 'Gestor Administrativo vê o botão de excluir');
+  w.close();
+}
+for (const f of ['Enfermeiro', 'Recepcionista', 'Vigilante']) {
+  const { w } = await abrir(f);
+  await espera(120);
+  ok(!w.document.querySelector('#sidebar-nav [data-mod=ouvidoria]'), f + ' NÃO vê o módulo Ouvidorias');
+  w.close();
+}
+
 // ---------- escala: versão, responsável pela confirmação, emissão e logo no relatório
 {
   const cap = {};

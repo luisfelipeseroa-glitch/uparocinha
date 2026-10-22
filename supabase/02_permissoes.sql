@@ -137,6 +137,12 @@ begin
   perform public._dar('painel', 'ver', gestores);
   perform public._dar('painel', 'editar', array['Gestor Administrativo']);   -- redefinir senha de colegas
 
+  -- 17. Ouvidorias (controle interno; dados de pacientes): só os gestores; excluir só o Gestor Administrativo
+  perform public._dar('ouvidoria', 'ver',    gestores);
+  perform public._dar('ouvidoria', 'criar',  gestores);
+  perform public._dar('ouvidoria', 'editar', gestores);
+  perform public._dar('ouvidoria', 'excluir', array['Gestor Administrativo']);
+
   -- 16. Chat: todos
   perform public._dar('chat', 'ver', todos);
 end
