@@ -3,7 +3,7 @@
   'use strict';
   const U = window.UPA, esc = U.esc;
   const GRUPOS = { gestor: 'Gestão', adm: 'Administrativo', assistencial: 'Assistencial', apoio: 'Apoio', terceiro: 'Terceiros', sem_acesso: 'Sem acesso' };
-  const ACOES = { insert: 'incluiu', update: 'alterou', delete: 'excluiu', login: 'entrou no sistema', senha_trocada: 'trocou a senha' };
+  const ACOES = { insert: 'incluiu', update: 'alterou', delete: 'excluiu', login: 'entrou no sistema', senha_trocada: 'trocou a senha', senha_redefinida: 'redefiniu a senha de um colega' };
   const TABELAS = { avisos: 'Avisos', estoque_itens: 'Estoque', documentos: 'Documentos', escala_plantao: 'Escala', eventos_adversos: 'Evento Adverso', passagem_cards: 'Passagem de Plantão', dieta_pedidos: 'Dieta', indicadores_mensais: 'Relatório Gerencial', rh_solicitacoes: 'RH', treinamentos: 'Treinamento', safety_huddles: 'Safety Huddle', manutencao_chamados: 'Manutenção' };
 
   async function adesao(el) {
@@ -43,10 +43,35 @@
     desenhar();
   }
 
+  /* Redefinir senha: só o Gestor Administrativo (painel:editar). Gera a provisória e mostra uma vez. */
+  function senhas(el) {
+    el.innerHTML = `<div class="cx" style="max-width:520px">
+        <h3 style="margin-bottom:6px">Redefinir senha de um colega</h3>
+        <p class="ajuda" style="margin-bottom:10px">Use quando alguém esquecer ou perder a senha. O sistema gera uma senha provisória, a pessoa entra com ela e é obrigada a criar uma senha nova. Esta tela não mostra a senha antiga (ninguém consegue vê-la).</p>
+        <label class="fl">Matrícula</label>
+        <input type="text" id="rs-mat" inputmode="numeric" autocomplete="off" placeholder="Ex.: 10344" style="width:100%;padding:11px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:16px">
+        <div class="barra" style="margin-top:12px"><button class="btn btn-primary" id="rs-ok"><i class="fas fa-key"></i> Gerar nova senha provisória</button></div></div>`;
+    const campo = el.querySelector('#rs-mat');
+    el.querySelector('#rs-ok').onclick = async () => {
+      const mat = campo.value.trim();
+      if (!mat) { U.toast('Digite a matrícula.', 'erro'); return; }
+      try {
+        const r = await U.db(window.sb.rpc('redefinir_senha', { p_matricula: mat }));
+        campo.value = '';
+        U.modal({ titulo: 'Senha provisória gerada', largura: 440, corpo: `<p><b>${esc(r.nome)}</b><br><span class="ajuda">${esc(r.funcao)} · matrícula ${esc(r.matricula)}</span></p>
+          <div style="margin:12px 0;padding:14px;text-align:center;background:#FFF7ED;border:2px dashed #F5731E;border-radius:8px;font:700 26px 'Courier New',monospace;letter-spacing:.08em;user-select:all" id="rs-senha">${esc(r.senha)}</div>
+          <p class="ajuda">Passe esta senha <b>só para a própria pessoa</b>. No próximo acesso ela será obrigada a criar uma senha nova. Esta tela não mostra a senha de novo: anote ou copie agora.</p>`,
+          botoes: [{ rotulo: 'Copiar senha', classe: 'btn-ghost', acao: async () => { try { await navigator.clipboard.writeText(r.senha); U.toast('Senha copiada.'); } catch (e) { U.toast('Selecione e copie manualmente.', 'erro'); } return false; } }, { rotulo: 'Fechar', classe: 'btn-primary' }] });
+      } catch (e) { U.erro(e); }
+    };
+  }
+
   U.registrar({
     id: 'painel', label: 'Painel do Gestor', icone: 'fa-gauge-high', cor: 'c-sistemas',
     render(el) {
-      U.abas(el, [{ id: 'adesao', rotulo: 'Adesão ao sistema', render: adesao }, { id: 'registro', rotulo: 'Registro de ações', render: registro }]);
+      const abas = [{ id: 'adesao', rotulo: 'Adesão ao sistema', render: adesao }, { id: 'registro', rotulo: 'Registro de ações', render: registro }];
+      if (U.can('painel', 'editar')) abas.push({ id: 'senhas', rotulo: 'Redefinir senha', render: senhas });
+      U.abas(el, abas);
     },
   });
 })();

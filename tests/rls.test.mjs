@@ -2,13 +2,14 @@
 // com os mesmos arquivos SQL que vão para o Supabase.
 //   cd tests && npm i && npm test
 import { PGlite } from '@electric-sql/pglite';
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..', 'supabase');
 const sql = (f) => readFileSync(join(raiz, f), 'utf8');
 
-const db = new PGlite();
+const db = new PGlite({ extensions: { pgcrypto } });
 let falhas = 0, total = 0;
 const ok = (cond, msg) => { total++; if (!cond) { falhas++; console.log('  ✗ FALHOU:', msg); } };
 
@@ -16,7 +17,9 @@ const ok = (cond, msg) => { total++; if (!cond) { falhas++; console.log('  ✗ F
 await db.exec(`
   create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
   create schema auth;
-  create table auth.users (id uuid primary key default gen_random_uuid(), email text);
+  create table auth.users (id uuid primary key default gen_random_uuid(), email text, encrypted_password text, updated_at timestamptz);
+  create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid);
+  create schema extensions; create extension pgcrypto schema extensions;
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   create schema storage;
@@ -31,11 +34,11 @@ await db.exec(`
   alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
   grant all on all tables in schema storage to authenticated;
 `);
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar', f, '→', e.message); process.exit(1); }
 }
 // rodar duas vezes tem que funcionar (idempotente)
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar de novo', f, '→', e.message); process.exit(1); }
 }
 
@@ -118,6 +121,7 @@ const regras = [
   ['13. Manutenção: todos + terceiros abrem chamado','manutencao', 'criar', [...TODOS, ...T]],
   ['14. Sistemas: todos menos vig, maq e higienização','sistemas', 'ver', [...G, ...A, ...S]],
   ['15. Painel do gestor: só gestores',              'painel', 'ver',     G],
+  ['15. Painel: só o Gestor Administrativo redefine senhas', 'painel', 'editar', ['Gestor Administrativo']],
   ['16. Chat: todos',                                'chat', 'ver',       TODOS],
 ];
 for (const [desc, mod, acao, quem] of regras) {
@@ -409,6 +413,25 @@ const cursoIni = (await db.query(`select id from public.treinamentos where titul
 const gab = (await db.query(`select jsonb_object_agg(ordem::text, correta) g from public.treinamento_questoes where treinamento_id = $1`, [cursoIni])).rows[0].g;
 const rr = await tenta('Enfermeiro', `select public.treinamento_responder($1, $2::jsonb) r`, [cursoIni, JSON.stringify(gab)]);
 ok(rr.ok && rr.rows[0].r.aprovado === true && rr.rows[0].r.nota === 100, 'prova de curso inicial: respostas certas aprovam com 100%');
+
+// ---- Redefinir senha (07_redefinir_senha.sql)
+await db.exec(`reset role`);
+const alvo = (await db.query(`select id, matricula from public.profiles where funcao = 'Enfermeiro' limit 1`)).rows[0];
+await db.exec(`update auth.users set encrypted_password = 'antiga' where id = '${alvo.id}'; insert into auth.sessions (user_id) values ('${alvo.id}'); update public.profiles set trocar_senha = false where id = '${alvo.id}'`);
+ok(!(await tenta('Gestor Assistencial', `select public.redefinir_senha($1)`, [alvo.matricula])).ok, 'gestor assistencial NÃO redefine senha');
+ok(!(await tenta('Enfermeiro', `select public.redefinir_senha($1)`, [alvo.matricula])).ok, 'enfermeiro NÃO redefine senha');
+ok(!(await tenta('anon', `select public.redefinir_senha($1)`, [alvo.matricula])).ok, 'anônimo NÃO redefine senha');
+const rs = await tenta('Gestor Administrativo', `select public.redefinir_senha($1) r`, [alvo.matricula]);
+ok(rs.ok && rs.rows[0].r.senha.length === 10, 'Gestor Administrativo redefine e recebe senha de 10 caracteres');
+const senhaNova = rs.ok ? rs.rows[0].r.senha : '';
+await db.exec(`reset role`);
+const ap = (await db.query(`select (encrypted_password = extensions.crypt($2, encrypted_password)) bate, encrypted_password <> 'antiga' mudou from auth.users where id = $1`, [alvo.id, senhaNova])).rows[0];
+ok(ap.bate && ap.mudou, 'a senha gravada confere com a senha mostrada (bcrypt)');
+ok((await db.query(`select trocar_senha from public.profiles where id = $1`, [alvo.id])).rows[0].trocar_senha === true, 'pessoa volta a ser obrigada a trocar a senha');
+ok((await db.query(`select count(*)::int n from auth.sessions where user_id = $1`, [alvo.id])).rows[0].n === 0, 'acessos abertos da pessoa são derrubados');
+ok((await db.query(`select count(*)::int n from public.auditoria where acao = 'senha_redefinida'`)).rows[0].n === 1, 'redefinição fica no registro de ações');
+ok(!(await db.query(`select * from public.auditoria`)).rows.some(r => JSON.stringify(r).includes(senhaNova)), 'a senha nova NÃO aparece no registro');
+ok(!(await tenta('Gestor Administrativo', `select public.redefinir_senha('000000')`)).ok, 'matrícula inexistente dá erro');
 
 console.log(`\n${total - falhas}/${total} verificações passaram.`);
 process.exit(falhas ? 1 : 0);

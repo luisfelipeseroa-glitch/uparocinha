@@ -135,6 +135,7 @@ begin
 
   -- 15. Painel do Gestor (adesão ao sistema e registro de ações): só gestores
   perform public._dar('painel', 'ver', gestores);
+  perform public._dar('painel', 'editar', array['Gestor Administrativo']);   -- redefinir senha de colegas
 
   -- 16. Chat: todos
   perform public._dar('chat', 'ver', todos);

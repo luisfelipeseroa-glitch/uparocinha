@@ -9,7 +9,7 @@ O site (GitHub Pages) continua o mesmo endereço. O que muda: agora ele conversa
 Painel do Supabase → **Authentication → Sign In / Providers** → desligue **"Allow new users to sign up"**.
 (Assim ninguém de fora cria conta; só entram as matrículas que você importar.)
 
-## 2) Supabase — criar tabelas e regras (5 arquivos + 1 opcional, nesta ordem)
+## 2) Supabase — criar tabelas e regras (5 arquivos + 2 opcionais, nesta ordem)
 **SQL Editor → New query**, cole o conteúdo do arquivo, clique **Run**. Repetir para cada um:
 1. `supabase/01_base.sql`
 2. `supabase/02_permissoes.sql`  ← aqui ficam as regras de quem pode o quê (dá para ajustar depois e rodar de novo)
@@ -17,6 +17,7 @@ Painel do Supabase → **Authentication → Sign In / Providers** → desligue *
 4. `supabase/04_storage.sql`
 5. `supabase/05_painel.sql`  ← Painel do Gestor (adesão e registro de ações) e troca autorizada refletindo na Escala
 6. `supabase/06_cursos.sql`  ← (opcional) 42 cursos prontos com prova: 6 para todos e 2 para cada função. Rode quando quiser; não duplica nem sobrescreve
+7. `supabase/07_redefinir_senha.sql`  ← botão **Redefinir senha** no Painel do Gestor (só o Gestor Administrativo): gera senha provisória nova para quem perdeu a dela
 
 Pode rodar de novo sem medo (é seguro repetir).
 

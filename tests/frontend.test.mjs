@@ -95,7 +95,7 @@ function criarCliente(ctx, log) {
       signOut: async () => ({ error: null }), updateUser: async () => ({ error: null }),
     },
     from: consulta,
-    rpc: async (nome, args) => { log.push(['rpc', nome, args]); if (nome === 'adesao_resumo') return { data: [{ funcao: 'Enfermeiro', grupo: 'assistencial', total: 10, entraram: 4 }, { funcao: 'Vigilante', grupo: 'apoio', total: 5, entraram: 5 }], error: null }; if (nome === 'adesao_pendentes') return { data: [{ matricula: '77', nome: 'Fulana Pendente', funcao: 'Enfermeiro' }], error: null }; return nome === 'meu_contexto' ? { data: ctx, error: null } : { data: nome === 'treinamento_prova' ? [] : null, error: null }; },
+    rpc: async (nome, args) => { log.push(['rpc', nome, args]); if (nome === 'adesao_resumo') return { data: [{ funcao: 'Enfermeiro', grupo: 'assistencial', total: 10, entraram: 4 }, { funcao: 'Vigilante', grupo: 'apoio', total: 5, entraram: 5 }], error: null }; if (nome === 'redefinir_senha') return { data: { matricula: args.p_matricula, nome: 'Fulana Teste', funcao: 'Enfermeiro', senha: 'Abc23xyz9K' }, error: null }; if (nome === 'adesao_pendentes') return { data: [{ matricula: '77', nome: 'Fulana Pendente', funcao: 'Enfermeiro' }], error: null }; return nome === 'meu_contexto' ? { data: ctx, error: null } : { data: nome === 'treinamento_prova' ? [] : null, error: null }; },
     storage: { from: () => ({ upload: async () => ({ error: null }), createSignedUrl: async () => ({ data: { signedUrl: 'http://x/y' }, error: null }), remove: async () => ({}) }) },
   };
 }
@@ -348,6 +348,31 @@ await botoes('Gestor Assistencial', 'avisos', '#av-novo', true, 'Novo aviso');
   ok(/tempo médio até concluir/.test(d.getElementById('mod-body').textContent), 'indicadores da Manutenção abrem');
   w.close();
 }
+// ---------- redefinir senha (só Gestor Administrativo)
+{
+  const { w, log } = await abrir('Gestor Administrativo');
+  await espera(150);
+  const d = w.document;
+  w.UPA.go('painel'); await espera(150);
+  const aba = d.querySelector('[data-aba=senhas]');
+  ok(!!aba, 'Gestor Administrativo vê a aba Redefinir senha');
+  aba.click(); await espera(80);
+  d.getElementById('rs-ok').click(); await espera(60);
+  ok(!log.some(l => l[1] === 'redefinir_senha'), 'sem matrícula não chama o servidor');
+  d.getElementById('rs-mat').value = '12345'; d.getElementById('rs-ok').click(); await espera(120);
+  ok(log.some(l => l[0] === 'rpc' && l[1] === 'redefinir_senha' && l[2].p_matricula === '12345'), 'chama redefinir_senha com a matrícula');
+  ok(d.getElementById('rs-senha') && d.getElementById('rs-senha').textContent === 'Abc23xyz9K' && /Fulana Teste/.test(d.body.textContent), 'mostra nome e senha provisória na tela');
+  ok(d.getElementById('rs-mat').value === '', 'limpa o campo da matrícula');
+  w.close();
+}
+{
+  const { w } = await abrir('Gestor Assistencial');
+  await espera(150);
+  w.UPA.go('painel'); await espera(150);
+  ok(!w.document.querySelector('[data-aba=senhas]'), 'Gestor Assistencial NÃO vê a aba Redefinir senha');
+  w.close();
+}
+
 {
   const { w } = await abrir('Enfermeiro');
   await espera(150);
