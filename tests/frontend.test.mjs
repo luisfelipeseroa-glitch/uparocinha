@@ -59,6 +59,7 @@ const fix = {
   estoque_itens: [{ ...base, setor: 'farmacia', insumo: 'Dipirona', quantidade: 10, duracao: '2 dias', recomendacao: 'Repor' }],
   estoque_log: [{ id: 1, setor: 'farmacia', insumo: 'Dipirona', acao: 'edicao', qtd_antes: 1, qtd_depois: 10, usuario_nome: 'A', em: agora }],
   documentos: [{ ...base, tipo: 'POP', assunto: 'POP Sepse', status: 'Ativo', link: 'https://x.y', arquivo_path: null }],
+  escala_confirmacoes: [],
   escala_plantao: [{ ...base, data: '2026-10-16', turno: 'manha', setor: 'Médico', nome: 'Dra. Ana', observacao: null }],
   eventos_adversos: [{ ...base, data_evento: '2026-10-15', hora_evento: '10:00:00', setor: 'Sala Vermelha', local_evento: null, tipo: 'Queda', grau: 'leve', descricao: 'Paciente caiu da maca', status: 'nova', anonimo: true }],
   passagem_cards: [{ ...base, id: 'u1', turno: 'manha', paciente: 'João', leito: '3', diagnostico: 'IAM', prioridade: 'critico', pendencia: 'ECG', recebido_em: null }],
@@ -95,7 +96,7 @@ function criarCliente(ctx, log) {
       signOut: async () => ({ error: null }), updateUser: async () => ({ error: null }),
     },
     from: consulta,
-    rpc: async (nome, args) => { log.push(['rpc', nome, args]); if (nome === 'adesao_resumo') return { data: [{ funcao: 'Enfermeiro', grupo: 'assistencial', total: 10, entraram: 4 }, { funcao: 'Vigilante', grupo: 'apoio', total: 5, entraram: 5 }], error: null }; if (nome === 'redefinir_senha') return { data: { matricula: args.p_matricula, nome: 'Fulana Teste', funcao: 'Enfermeiro', senha: 'Abc23xyz9K' }, error: null }; if (nome === 'adesao_pendentes') return { data: [{ matricula: '77', nome: 'Fulana Pendente', funcao: 'Enfermeiro' }], error: null }; return nome === 'meu_contexto' ? { data: ctx, error: null } : { data: nome === 'treinamento_prova' ? [] : null, error: null }; },
+    rpc: async (nome, args) => { log.push(['rpc', nome, args]); if (nome === 'adesao_resumo') return { data: [{ funcao: 'Enfermeiro', grupo: 'assistencial', total: 10, entraram: 4 }, { funcao: 'Vigilante', grupo: 'apoio', total: 5, entraram: 5 }], error: null }; if (nome === 'escala_hash') return { data: globalThis.__hashEscala ?? 'h-atual', error: null }; if (nome === 'escala_confirmar') return { data: { versao: (fix.escala_confirmacoes[0]?.versao || 0) + 1, nova: true }, error: null }; if (nome === 'redefinir_senha') return { data: { matricula: args.p_matricula, nome: 'Fulana Teste', funcao: 'Enfermeiro', senha: 'Abc23xyz9K' }, error: null }; if (nome === 'adesao_pendentes') return { data: [{ matricula: '77', nome: 'Fulana Pendente', funcao: 'Enfermeiro' }], error: null }; return nome === 'meu_contexto' ? { data: ctx, error: null } : { data: nome === 'treinamento_prova' ? [] : null, error: null }; },
     storage: { from: () => ({ upload: async () => ({ error: null }), createSignedUrl: async () => ({ data: { signedUrl: 'http://x/y' }, error: null }), remove: async () => ({}) }) },
   };
 }
@@ -348,6 +349,57 @@ await botoes('Gestor Assistencial', 'avisos', '#av-novo', true, 'Novo aviso');
   ok(/tempo médio até concluir/.test(d.getElementById('mod-body').textContent), 'indicadores da Manutenção abrem');
   w.close();
 }
+// ---------- escala: versão, responsável pela confirmação, emissão e logo no relatório
+{
+  const cap = {};
+  const { w, log } = await abrir('Gestor Assistencial');
+  await espera(100);
+  const d = w.document;
+  w.UPA.imprimir = (h, t) => { cap.h = h; cap.t = t; };
+  fix.escala_confirmacoes = []; globalThis.__hashEscala = 'h-atual';
+  w.UPA.go('escala'); await espera(150);
+  ok(/Ainda não confirmada/.test(d.getElementById('es-situ').textContent), 'escala sem confirmação mostra "Ainda não confirmada"');
+  d.getElementById('es-pdf').click();
+  ok(/RASCUNHO/.test(cap.h) && /Data e hora de emissão/.test(cap.h) && /Responsável pela confirmação/.test(cap.h) && /Versão da escala/.test(cap.h) && /logo-upa\.png/.test(cap.h) && /-RASC-/.test(cap.h), 'relatório sem confirmação: rascunho, emissão, responsável, versão e logo da UPA');
+  ok(/\d{2}\/\d{2}\/\d{4}/.test(cap.h.split('Data e hora de emissão')[1].slice(0, 200)), 'relatório traz a data/hora de emissão preenchida');
+  d.getElementById('es-conf').click(); await espera(60);
+  const confirmar = [...d.querySelectorAll('.upa-modal button')].find(b => /Confirmar/.test(b.textContent));
+  ok(!!confirmar, 'pede confirmação antes de gerar a versão'); confirmar.click(); await espera(120);
+  ok(log.some(l => l[0] === 'rpc' && l[1] === 'escala_confirmar'), 'chama escala_confirmar');
+  w.close();
+}
+{
+  const cap = {};
+  fix.escala_confirmacoes = [{ id: 1, data: '2026-10-16', turno: 'manha', versao: 2, hash: 'h-atual', total: 1, confirmado_por_nome: 'Bia Gestora', confirmado_matricula: '555', confirmado_funcao: 'Gestor Assistencial', confirmado_em: agora }];
+  globalThis.__hashEscala = 'h-atual';
+  const { w } = await abrir('Gestor Assistencial');
+  await espera(100);
+  w.UPA.imprimir = (h, t) => { cap.h = h; cap.t = t; };
+  w.UPA.go('escala'); await espera(150);
+  const d = w.document;
+  ok(/Versão 2 confirmada/.test(d.getElementById('es-situ').textContent) && /Bia Gestora/.test(d.getElementById('es-situ').textContent), 'tela mostra versão 2 confirmada por quem confirmou');
+  d.getElementById('es-pdf').click();
+  ok(/ESCALA CONFIRMADA — VERSÃO 2/.test(cap.h) && /Bia Gestora/.test(cap.h) && /matrícula 555/.test(cap.h) && /V2/.test(cap.h) && /-V2-/.test(cap.h), 'relatório confirmado: versão 2, responsável com matrícula e código');
+  w.close();
+  globalThis.__hashEscala = 'h-mudou';
+  const { w: w2 } = await abrir('Gestor Assistencial');
+  await espera(100);
+  w2.UPA.imprimir = (h, t) => { cap.h2 = h; };
+  w2.UPA.go('escala'); await espera(150);
+  ok(/Alterada depois da versão 2/.test(w2.document.getElementById('es-situ').textContent), 'escala mudou depois da confirmação: tela avisa');
+  w2.document.getElementById('es-pdf').click();
+  ok(/ALTERADA DEPOIS DA VERSÃO 2/.test(cap.h2), 'relatório avisa que a escala foi alterada depois da confirmação');
+  w2.close();
+  fix.escala_confirmacoes = []; globalThis.__hashEscala = 'h-atual';
+}
+{
+  const { w } = await abrir('Médico');
+  await espera(100);
+  w.UPA.go('escala'); await espera(150);
+  ok(!w.document.getElementById('es-conf'), 'médico NÃO vê o botão Confirmar escala');
+  w.close();
+}
+
 // ---------- redefinir senha (só Gestor Administrativo)
 {
   const { w, log } = await abrir('Gestor Administrativo');

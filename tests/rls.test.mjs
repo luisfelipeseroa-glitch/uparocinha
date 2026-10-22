@@ -34,11 +34,11 @@ await db.exec(`
   alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
   grant all on all tables in schema storage to authenticated;
 `);
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar', f, '→', e.message); process.exit(1); }
 }
 // rodar duas vezes tem que funcionar (idempotente)
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar de novo', f, '→', e.message); process.exit(1); }
 }
 
@@ -432,6 +432,28 @@ ok((await db.query(`select count(*)::int n from auth.sessions where user_id = $1
 ok((await db.query(`select count(*)::int n from public.auditoria where acao = 'senha_redefinida'`)).rows[0].n === 1, 'redefinição fica no registro de ações');
 ok(!(await db.query(`select * from public.auditoria`)).rows.some(r => JSON.stringify(r).includes(senhaNova)), 'a senha nova NÃO aparece no registro');
 ok(!(await tenta('Gestor Administrativo', `select public.redefinir_senha('000000')`)).ok, 'matrícula inexistente dá erro');
+
+// ---- Confirmação e versão da escala (08_escala_versao.sql)
+await db.exec(`reset role`);
+await db.exec(`delete from public.escala_plantao where data = '2031-03-01'; insert into public.escala_plantao (data, turno, setor, nome) values ('2031-03-01','manha','Médico','Dra. A'), ('2031-03-01','manha','Enfermagem','Enf. B')`);
+ok(!(await tenta('Enfermeiro', `select public.escala_confirmar('2031-03-01','manha')`)).ok, 'enfermeiro NÃO confirma escala');
+ok(!(await tenta('anon', `select public.escala_confirmar('2031-03-01','manha')`)).ok, 'anônimo NÃO confirma escala');
+ok(!(await tenta('Gestor Assistencial', `select public.escala_confirmar('2031-03-01','noite')`)).ok, 'sem lançamentos não confirma');
+const c1 = await tenta('Recepcionista', `select public.escala_confirmar('2031-03-01','manha') r`);
+ok(c1.ok && c1.rows[0].r.versao === 1 && c1.rows[0].r.nova === true, 'adm confirma e gera a V1');
+const c1b = await tenta('Gestor Assistencial', `select public.escala_confirmar('2031-03-01','manha') r`);
+ok(c1b.ok && c1b.rows[0].r.versao === 1 && c1b.rows[0].r.nova === false, 'confirmar de novo sem mudança mantém a V1');
+await db.exec(`reset role`);
+await db.exec(`insert into public.escala_plantao (data, turno, setor, nome) values ('2031-03-01','manha','Farmácia','Farm. C')`);
+const hAtual = await tenta('Enfermeiro', `select public.escala_hash('2031-03-01','manha') h`);
+const conf1 = await tenta('Enfermeiro', `select hash, versao, confirmado_por_nome, confirmado_matricula, confirmado_funcao from public.escala_confirmacoes where data = '2031-03-01' and turno = 'manha'`);
+ok(hAtual.ok && conf1.rows.length === 1 && hAtual.rows[0].h !== conf1.rows[0].hash, 'mudar a escala depois muda a impressão digital (versão desatualizada)');
+ok(conf1.rows[0].confirmado_por_nome && conf1.rows[0].confirmado_matricula && conf1.rows[0].confirmado_funcao === 'Recepcionista', 'guarda quem confirmou (nome, matrícula e função)');
+const c2 = await tenta('Gestor Assistencial', `select public.escala_confirmar('2031-03-01','manha') r`);
+ok(c2.ok && c2.rows[0].r.versao === 2 && c2.rows[0].r.nova === true, 'nova confirmação após alteração gera a V2');
+ok(!(await tenta('Gestor Assistencial', `insert into public.escala_confirmacoes (data, turno, versao, hash, total) values ('2031-03-01','manha',9,'x',1)`)).ok, 'ninguém grava confirmação direto na tabela');
+ok(!(await tenta('Gestor Assistencial', `update public.escala_confirmacoes set versao = 99`)).ok || (await tenta('Gestor Assistencial', `update public.escala_confirmacoes set versao = 99`)).n === 0, 'ninguém altera confirmação');
+ok((await lerN(`select * from public.escala_confirmacoes`, 'Vigilante')) >= 2, 'todos que veem a escala veem as confirmações');
 
 console.log(`\n${total - falhas}/${total} verificações passaram.`);
 process.exit(falhas ? 1 : 0);
