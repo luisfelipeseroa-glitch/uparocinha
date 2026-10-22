@@ -4,14 +4,77 @@
   const U = window.UPA, esc = U.esc;
   const abs = p => new URL(p, location.href).href;
 
+  /* Selo dourado: roseta serrilhada com estrela e fitas */
+  function selo() {
+    const pts = []; const N = 32;
+    for (let i = 0; i < N * 2; i++) { const a = Math.PI * i / N, rr = i % 2 ? 44 : 50; pts.push((60 + rr * Math.cos(a)).toFixed(1) + ',' + (60 + rr * Math.sin(a)).toFixed(1)); }
+    const est = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + Math.PI * i / 5, rr = i % 2 ? 9.5 : 23; est.push((60 + rr * Math.cos(a)).toFixed(1) + ',' + (58 + rr * Math.sin(a)).toFixed(1)); }
+    return `<svg viewBox="0 0 120 150" xmlns="http://www.w3.org/2000/svg" style="width:31mm;height:auto;display:block">
+      <defs>
+        <linearGradient id="ouro" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5A12"/><stop offset=".22" stop-color="#E9C95F"/><stop offset=".45" stop-color="#FFF3B8"/><stop offset=".7" stop-color="#C9972B"/><stop offset="1" stop-color="#6E500E"/></linearGradient>
+        <radialGradient id="ouro2" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#FFF6C8"/><stop offset=".45" stop-color="#E2B93E"/><stop offset="1" stop-color="#8B6914"/></radialGradient>
+        <linearGradient id="fita" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E4FC4"/><stop offset="1" stop-color="#0B3A8C"/></linearGradient>
+      </defs>
+      <polygon points="38,92 22,146 41,138 52,148 62,96" fill="url(#fita)"/><polygon points="82,92 98,146 79,138 68,148 58,96" fill="url(#fita)"/>
+      <polygon points="38,92 22,146 41,138 52,148 62,96" fill="none" stroke="#C9972B" stroke-width="1.2"/><polygon points="82,92 98,146 79,138 68,148 58,96" fill="none" stroke="#C9972B" stroke-width="1.2"/>
+      <polygon points="${pts.join(' ')}" fill="url(#ouro)" stroke="#7A5A12" stroke-width=".8"/>
+      <circle cx="60" cy="60" r="38" fill="url(#ouro2)" stroke="#7A5A12" stroke-width="1"/>
+      <circle cx="60" cy="60" r="33" fill="none" stroke="#FFF3B8" stroke-width="1.4" stroke-dasharray="1.2 2.6"/>
+      <circle cx="60" cy="60" r="28.5" fill="none" stroke="#8B6914" stroke-width=".8"/>
+      <polygon points="${est.join(' ')}" fill="#FFF8D6" stroke="#8B6914" stroke-width="1" stroke-linejoin="round"/>
+      <path d="M33 76 Q27 58 36 42 M87 76 Q93 58 84 42" fill="none" stroke="#8B6914" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>`;
+  }
+  function cantoOrn(rot) {
+    return `<svg viewBox="0 0 60 60" style="position:absolute;width:19mm;height:19mm;${rot}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="oc${rot.length}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5A12"/><stop offset=".5" stop-color="#F0D36E"/><stop offset="1" stop-color="#8B6914"/></linearGradient></defs>
+      <path d="M2 58 V2 H58" fill="none" stroke="url(#oc${rot.length})" stroke-width="2.4"/><path d="M9 58 V9 H58" fill="none" stroke="url(#oc${rot.length})" stroke-width=".9"/>
+      <path d="M16 58 Q16 16 58 16" fill="none" stroke="url(#oc${rot.length})" stroke-width="1.2"/><circle cx="9" cy="9" r="3.4" fill="url(#oc${rot.length})"/><circle cx="21" cy="9" r="1.4" fill="url(#oc${rot.length})"/><circle cx="9" cy="21" r="1.4" fill="url(#oc${rot.length})"/></svg>`;
+  }
+
+  /* Certificado: A4 na horizontal, margem de 1,5 cm (área útil 267 × 180 mm) */
   function certificado(t, r) {
-    U.imprimir(`<div style="border:6px double #1A6FC4;padding:30px;text-align:center">
-      <div style="display:flex;justify-content:space-between;align-items:center"><img src="${abs('img/logo-upa.png')}" style="height:64px"><img src="${abs('img/logo-gnosis.jpg')}" style="height:56px"></div>
-      <h1 style="color:#1158A0;margin:26px 0 6px;font-size:28px">CERTIFICADO</h1><p>Certificamos que</p>
-      <h2 style="font-size:22px;margin:8px 0">${esc(r.usuario_nome)}</h2><p>matrícula ${esc(r.matricula)} · ${esc(r.funcao)}</p>
-      <p style="margin:14px 0">concluiu com aproveitamento o treinamento</p><h2 style="font-size:20px;color:#1158A0">${esc(t.titulo)}</h2>
-      <p>${t.carga_horaria ? 'Carga horária: ' + esc(t.carga_horaria) + ' h · ' : ''}Nota: ${r.nota}% · Concluído em ${U.fmtData(r.concluido_em)}</p>
-      <p style="margin-top:40px"><span style="display:inline-block;border-top:1px solid #111;padding:4px 30px">${esc(r.validado_por_nome || '')}<br><small>Validado em ${U.fmtDH(r.validado_em)} — UPA Rocinha</small></span></p></div>`, 'Certificado');
+    const cod = 'UPA-' + String(r.id).padStart(5, '0') + '-' + String(r.treinamento_id).padStart(3, '0');
+    U.imprimir(`<div style="position:relative;width:267mm;height:179mm;box-sizing:border-box;overflow:hidden;page-break-inside:avoid;break-inside:avoid;font-family:Georgia,'Times New Roman',serif;color:#0B3A8C;
+        background:radial-gradient(ellipse at 50% 42%,#FFFFFF 0,#FFFDF4 55%,#FBF3DC 100%)">
+      <div style="position:absolute;inset:0;border:3.2mm solid transparent;border-image:linear-gradient(135deg,#7A5A12,#E9C95F 22%,#FFF3B8 40%,#C9972B 62%,#F0D36E 80%,#6E500E) 1"></div>
+      <div style="position:absolute;inset:4.6mm;border:.5mm solid #0B3A8C"></div>
+      <div style="position:absolute;inset:6mm;border:.3mm solid #C9972B"></div>
+      <div style="position:absolute;inset:7mm;opacity:.06;background:repeating-radial-gradient(circle at 50% 50%,#0B3A8C 0 .3mm,transparent .3mm 3mm)"></div>
+      ${cantoOrn('left:7.5mm;top:7.5mm')}${cantoOrn('right:7.5mm;top:7.5mm;transform:scaleX(-1)')}${cantoOrn('left:7.5mm;bottom:7.5mm;transform:scaleY(-1)')}${cantoOrn('right:7.5mm;bottom:7.5mm;transform:scale(-1,-1)')}
+
+      <div style="position:absolute;left:20mm;right:20mm;top:12mm;display:flex;justify-content:space-between;align-items:center">
+        <img src="${abs('img/logo-upa.png')}" style="height:19mm">
+        <div style="text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;letter-spacing:.35em;color:#6B4FD8;font-weight:700">UPA ROCINHA · GESTÃO INTELIGENTE</div>
+        <img src="${abs('img/logo-gnosis.jpg')}" style="height:15mm;mix-blend-mode:multiply">
+      </div>
+
+      <div style="position:absolute;left:0;right:0;top:36mm;text-align:center">
+        <svg viewBox="0 0 640 64" style="width:178mm;height:auto;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7A5A12"/><stop offset=".22" stop-color="#D9B342"/><stop offset=".45" stop-color="#FFF0A8"/><stop offset=".68" stop-color="#C9972B"/><stop offset="1" stop-color="#7A5A12"/></linearGradient></defs>
+          <text x="320" y="52" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="60" letter-spacing="14" fill="url(#tt)" stroke="#8B6914" stroke-width=".6">CERTIFICADO</text></svg>
+        <div style="display:flex;align-items:center;justify-content:center;gap:4mm;margin-top:2.4mm">
+          <span style="width:38mm;height:.5mm;background:linear-gradient(90deg,transparent,#C9972B)"></span>
+          <span style="font-size:10.5pt;letter-spacing:.3em;color:#8B6914;font-family:Arial,Helvetica,sans-serif;font-weight:700">DE CONCLUSÃO DE TREINAMENTO</span>
+          <span style="width:38mm;height:.5mm;background:linear-gradient(270deg,transparent,#C9972B)"></span>
+        </div>
+        <p style="margin:9mm 0 1.5mm;font-size:12.5pt;font-style:italic;color:#4A5B7A">Certificamos que</p>
+        <div style="font-size:31pt;font-style:italic;font-weight:700;line-height:1.1;padding:0 22mm">${esc(r.usuario_nome)}</div>
+        <div style="margin:1.6mm auto 0;width:150mm;height:.6mm;background:linear-gradient(90deg,transparent,#C9972B 20%,#F0D36E 50%,#C9972B 80%,transparent)"></div>
+        <p style="margin:1.8mm 0 0;font-size:10.5pt;font-family:Arial,Helvetica,sans-serif;color:#4A5B7A">Matrícula ${esc(r.matricula)} · ${esc(r.funcao)}</p>
+        <p style="margin:9mm 0 1.8mm;font-size:12.5pt;font-style:italic;color:#4A5B7A">concluiu com aproveitamento o treinamento</p>
+        <div style="font-size:21pt;font-weight:700;line-height:1.15;padding:0 26mm">${esc(t.titulo)}</div>
+        <p style="margin:4.2mm 0 0;font-size:11pt;font-family:Arial,Helvetica,sans-serif;color:#1F3A5F">${t.carga_horaria ? 'Carga horária: <b>' + esc(t.carga_horaria) + ' h</b> &nbsp;·&nbsp; ' : ''}Aproveitamento: <b>${r.nota}%</b> &nbsp;·&nbsp; Concluído em <b>${U.fmtData(r.concluido_em)}</b></p>
+      </div>
+
+      <div style="position:absolute;left:23mm;right:23mm;bottom:11mm;display:flex;justify-content:space-between;align-items:flex-end;font-family:Arial,Helvetica,sans-serif">
+        <div style="width:78mm;text-align:center;font-size:9pt;color:#1F3A5F">
+          <div style="border-top:.4mm solid #0B3A8C;padding-top:1.5mm"><b style="font-size:10pt">${esc(r.validado_por_nome || 'Coordenação')}</b><br>Validado em ${U.fmtDH(r.validado_em)}<br><span style="color:#6B4FD8">Coordenação · UPA Rocinha</span></div>
+        </div>
+        <div style="margin-bottom:-2mm">${selo()}</div>
+        <div style="width:78mm;text-align:center;font-size:9pt;color:#1F3A5F">
+          <div style="border-top:.4mm solid #0B3A8C;padding-top:1.5mm"><b style="font-size:10pt">Código de autenticidade</b><br><span style="font-family:'Courier New',monospace;font-size:10.5pt;letter-spacing:.06em">${cod}</span><br><span style="color:#6B4FD8">Estrada da Gávea, 520 · Rocinha</span></div>
+        </div>
+      </div>
+    </div>`, 'Certificado', { paisagem: true, margem: '15mm' });
   }
 
   async function prova(t, depois) {

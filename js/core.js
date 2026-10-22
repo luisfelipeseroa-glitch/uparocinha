@@ -195,18 +195,22 @@
   UPA.lerArquivoDataUrl = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => no(new Error('Falha ao ler o arquivo.')); r.readAsDataURL(f); });
 
   /* ---------------- impressão (documento em tela própria) ---------------- */
-  UPA.imprimir = function (html, titulo) {
+  /* opts: { paisagem: true } → A4 na horizontal, sem margem do navegador (a margem fica por conta do HTML);
+     { margem: '15mm' } ajusta a margem da página. */
+  UPA.imprimir = function (html, titulo, opts) {
+    opts = opts || {};
     const f = document.createElement('iframe');
     f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
     document.body.appendChild(f);
     const d = f.contentWindow.document;
+    const pag = opts.paisagem ? `@page{size:A4 landscape;margin:${opts.margem || '15mm'}}body{margin:0}` : '@page{margin:12mm}';
     d.open();
     d.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${UPA.esc(titulo || 'Documento')}</title>
-      <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:18mm;font-size:12px}
+      <style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:18mm;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       table{border-collapse:collapse;width:100%}td,th{border:1px solid #444;padding:5px 7px;text-align:left;vertical-align:top}
       h1,h2,h3{margin:0 0 6px}.sub{color:#555}.assin{display:inline-block;width:30%;text-align:center;margin-top:30px;font-size:11px}
       .assin img{max-height:60px;display:block;margin:0 auto 2px}.linha{border-top:1px solid #111;padding-top:3px}
-      @media print{@page{margin:12mm}}</style></head><body>${html}</body></html>`);
+      @media print{${pag}}${opts.paisagem ? 'html,body{margin:0}' : ''}</style></head><body>${html}</body></html>`);
     d.close();
     const imgs = Array.from(d.images || []);
     const prontas = Promise.all(imgs.map(i => (i.complete ? null : new Promise(r => { i.onload = i.onerror = r; }))));
