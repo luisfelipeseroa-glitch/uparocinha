@@ -468,6 +468,11 @@ await botoes('Gestor Assistencial', 'avisos', '#av-novo', true, 'Novo aviso');
   ok(log.some(l => l[0] === 'ouvidorias' && l[1] === 'insert' && l[2].protocolo === '1746-0099' && l[2].coordenacao === 'RH Focal' && Object.keys(l[2]).sort().join() === 'categoria,coordenacao,data_manifestacao,prazo,protocolo,providencia,situacao'), 'envia só os 7 campos permitidos');
   d.querySelector('[data-aba=res]').click(); await espera(100);
   ok(/Por coordenação/.test(d.getElementById('mod-body').textContent) && /Tempo de espera/.test(d.getElementById('mod-body').textContent), 'aba Resumo mostra por coordenação e categoria');
+  ok(!!d.getElementById('ou-pdf'), 'aba Resumo tem o botão de relatório para imprimir');
+  let impr = null; w.UPA.imprimir = (html, titulo) => { impr = { html, titulo }; };
+  d.getElementById('ou-pdf').click(); await espera(60);
+  ok(!!impr && /logo-upa\.png/.test(impr.html) && /Relatório de Ouvidorias/.test(impr.html) && /1746-0001/.test(impr.html) && /Por categoria/.test(impr.html), 'relatório impresso traz logo, totais e ações em aberto');
+  ok(!!impr && !impr.html.includes('1746-0002</b>'), 'relatório lista só as ações em aberto');
   ok(!d.querySelector('[data-ex]'), 'gestor assistencial não vê botão de excluir');
   w.close();
 }

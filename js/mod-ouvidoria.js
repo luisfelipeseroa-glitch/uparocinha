@@ -170,8 +170,36 @@
     const bloco = (titulo, linhas) => `<div class="section-title">${titulo}</div><div class="cx"><table class="tb"><thead><tr><th>${titulo.startsWith('Por coord') ? 'Coordenação' : 'Categoria'}</th><th style="width:70px">Total</th><th style="width:90px">Em aberto</th><th style="width:90px">Vencidas</th><th style="width:100px">Concluídas</th></tr></thead><tbody>${
       linhas.map(l => `<tr><td>${esc(l.n)}</td><td>${l.total}</td><td>${l.abertas}</td><td style="${l.venc ? 'color:#B91C1C;font-weight:700' : ''}">${l.venc}</td><td>${l.conc}</td></tr>`).join('')}</tbody></table></div>`;
     el.innerHTML = dados.length
-      ? bloco('Por coordenação', conta(dados, 'coordenacao', COORDS)) + '<div style="height:12px"></div>' + bloco('Por categoria', conta(dados, 'categoria', CATEGORIAS).filter(l => l.total))
+      ? '<div class="barra" style="margin-bottom:10px"><button class="btn btn-primary" id="ou-pdf"><i class="fas fa-print"></i> Relatório para imprimir / PDF</button></div>' +
+        bloco('Por coordenação', conta(dados, 'coordenacao', COORDS)) + '<div style="height:12px"></div>' + bloco('Por categoria', conta(dados, 'categoria', CATEGORIAS).filter(l => l.total))
       : '<div class="vazio">Nenhum registro ainda.</div>';
+    if (!dados.length) return;
+    el.querySelector('#ou-pdf').onclick = () => relatorio(dados, conta);
+  }
+
+  /* relatório para imprimir/PDF: só usa o que o controle guarda (sem nome de paciente, relato ou dado clínico) */
+  function relatorio(dados, conta) {
+    const logo = new URL('img/logo-upa.png', location.href).href;
+    const kv = (a, b) => `<tr><td style="width:30%;background:#F3F4F6"><b>${a}</b></td><td>${b}</td></tr>`;
+    const th = c => c.map(x => `<th>${x}</th>`).join('');
+    const tabela = (cab, linhas) => `<table><thead><tr>${th(cab)}</tr></thead><tbody>${linhas.map(l => `<tr>${l.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    const ano = o => o.data_manifestacao.slice(0, 4);
+    const anos = [...new Set(dados.map(ano))].sort();
+    const total = dados.length, abertas = dados.filter(aberta).length, venc = dados.filter(vencida).length, conc = dados.filter(o => o.situacao === 'concluida').length, elog = dados.filter(o => o.categoria === 'Elogio').length;
+    const datas = dados.map(o => o.data_manifestacao).sort();
+    const linhasConta = (lista, chave, ordem) => conta(lista, chave, ordem).filter(l => l.total).map(l => [esc(l.n), l.total, l.abertas, l.venc, l.conc]);
+    const pend = dados.filter(aberta).sort((a, b) => a.prazo < b.prazo ? -1 : 1);
+    U.imprimir(`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:3px solid #0B3A8C;padding-bottom:8px">
+        <img src="${logo}" style="height:58px"><div style="text-align:right"><h2 style="margin:0;color:#0B3A8C">Relatório de Ouvidorias</h2><div class="sub">UPA Rocinha · controle gerencial interno</div></div></div>
+      <table style="margin:10px 0"><tbody>${kv('Data e hora de emissão', U.fmtDH(new Date().toISOString()))}${kv('Emitido por', `${esc(U.ctx.nome)} · matrícula ${esc(U.ctx.matricula)}`)}
+        ${kv('Período', `${U.fmtData(datas[0])} a ${U.fmtData(datas[datas.length - 1])}`)}
+        ${kv('Situação geral', `${total} registros · ${elog} elogio(s) · ${abertas} em aberto · <b style="color:#B91C1C">${venc} com prazo vencido</b> · ${conc} concluído(s)`)}</tbody></table>
+      <h3>Por ano</h3>${tabela(['Ano', 'Total', 'Elogios', 'Em aberto', 'Vencidas', 'Concluídas'], anos.map(a => { const l = dados.filter(o => ano(o) === a); return [a, l.length, l.filter(o => o.categoria === 'Elogio').length, l.filter(aberta).length, l.filter(vencida).length, l.filter(o => o.situacao === 'concluida').length]; }))}
+      <h3 style="margin-top:12px">Por categoria</h3>${tabela(['Categoria', 'Total', 'Em aberto', 'Vencidas', 'Concluídas'], linhasConta(dados, 'categoria', CATEGORIAS))}
+      <h3 style="margin-top:12px">Por coordenação</h3>${tabela(['Coordenação', 'Total', 'Em aberto', 'Vencidas', 'Concluídas'], linhasConta(dados, 'coordenacao', COORDS))}
+      <h3 style="margin-top:12px">Ações em aberto (${pend.length})</h3>` +
+      (pend.length ? tabela(['Protocolo', 'Data', 'Categoria', 'Coordenação', 'Providência', 'Prazo'], pend.map(o => [`<b>${esc(o.protocolo)}</b>`, U.fmtData(o.data_manifestacao), esc(o.categoria), esc(o.coordenacao), esc(o.providencia), `${U.fmtData(o.prazo)}${vencida(o) ? ` <b style="color:#B91C1C">(vencido há ${-dias(o.prazo)} d)</b>` : ''}`])) : '<p>Nenhuma ação em aberto.</p>') +
+      '<p class="sub" style="margin-top:12px;font-size:10px">Emitido pelo sistema Gestão Inteligente UPA Rocinha. Controle interno: não substitui a plataforma oficial 1746 e não guarda nome de paciente, relato nem dado clínico. Registros importados do histórico podem ter data estimada e situação "Não se aplica".</p>', 'Relatório de Ouvidorias');
   }
 
   U.registrar({
