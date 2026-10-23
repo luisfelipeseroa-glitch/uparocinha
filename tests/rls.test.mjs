@@ -34,11 +34,11 @@ await db.exec(`
   alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
   grant all on all tables in schema storage to authenticated;
 `);
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql', '09_ouvidoria.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql', '09_ouvidoria.sql', '10_pops.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar', f, '→', e.message); process.exit(1); }
 }
 // rodar duas vezes tem que funcionar (idempotente)
-for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql', '09_ouvidoria.sql']) {
+for (const f of ['01_base.sql', '02_permissoes.sql', '03_modulos.sql', '04_storage.sql', '05_painel.sql', '06_cursos.sql', '07_redefinir_senha.sql', '08_escala_versao.sql', '09_ouvidoria.sql', '10_pops.sql']) {
   try { await db.exec(sql(f)); } catch (e) { console.log('ERRO ao rodar de novo', f, '→', e.message); process.exit(1); }
 }
 
@@ -126,6 +126,10 @@ const regras = [
   ['17. Ouvidorias: só os 3 gestores criam',         'ouvidoria', 'criar',   G],
   ['17. Ouvidorias: só os 3 gestores editam',        'ouvidoria', 'editar',  G],
   ['17. Ouvidorias: só o Gestor Administrativo exclui','ouvidoria', 'excluir', ['Gestor Administrativo']],
+  ['18. POPs: todos veem',                           'pop', 'ver',     TODOS],
+  ['18. POPs: só os 3 gestores criam',               'pop', 'criar',   G],
+  ['18. POPs: só os 3 gestores editam',              'pop', 'editar',  G],
+  ['18. POPs: só o Gestor Administrativo exclui',    'pop', 'excluir', ['Gestor Administrativo']],
   ['16. Chat: todos',                                'chat', 'ver',       TODOS],
 ];
 for (const [desc, mod, acao, quem] of regras) {
@@ -484,6 +488,45 @@ ok((await tenta('Gestor Assistencial', `delete from public.ouvidorias where prot
 ok((await tenta('Gestor Administrativo', `delete from public.ouvidorias where protocolo = '1746-0002'`)).n === 1, 'gestor administrativo exclui');
 ok((await db.query(`select count(*)::int n from public.auditoria where tabela = 'ouvidorias'`)).rows[0].n >= 3, 'ações em ouvidorias ficam no registro (quem e quando)');
 ok(!(await db.query(`select * from public.auditoria where tabela = 'ouvidorias'`)).rows.some(r => JSON.stringify(r).includes('acolhimento')), 'o registro de ações NÃO guarda o texto da providência');
+
+// ---- POPs (10_pops.sql)
+await db.exec(`reset role`);
+const POP = (cod, extra = '') => `insert into public.pops (codigo, titulo, area, status${extra ? ', ' + extra.split('=')[0] : ''}) values ('${cod}', 'Higienização das mãos', 'Enfermagem', 'em_elaboracao'${extra ? ", " + extra.split('=')[1] : ''}) returning id`;
+const p1 = await tenta('Gestor Assistencial', POP('POP.ENF.001'));
+ok(p1.ok, 'gestor cadastra um POP');
+const popId = p1.rows[0].id;
+for (const f of ['Enfermeiro', 'Médico', 'Recepcionista', 'Vigilante']) ok(!(await tenta(f, POP('POP.X.' + f.length))).ok, f + ' NÃO cadastra POP');
+ok(await lerN(`select * from public.pops`, 'Enfermeiro') === 0, 'rascunho (em elaboração) NÃO aparece para o enfermeiro');
+ok(await lerN(`select * from public.pops`, 'Gestor Administrativo') === 1, 'gestor vê o rascunho');
+ok(!(await tenta('Gestor Assistencial', POP('POP.ENF.001'))).ok, 'código repetido é recusado');
+ok(!(await tenta('Gestor Assistencial', POP('pop com espaço'))).ok, 'código com espaço é recusado');
+ok(!(await tenta('Gestor Assistencial', POP('POP.ENF.002', "periodicidade_meses=0"))).ok, 'periodicidade 0 é recusada');
+ok(!(await tenta('Gestor Assistencial', POP('POP.ENF.003', "tipo='Outro'"))).ok, 'tipo fora da lista é recusado');
+ok((await tenta('Gestor Assistencial', `update public.pops set status = 'publicado', data_publicacao = '2031-05-01' where id = ${popId}`)).n === 1, 'gestor publica o POP');
+ok(await lerN(`select * from public.pops`, 'Enfermeiro') === 1, 'POP publicado aparece para o enfermeiro');
+ok(await lerN(`select * from public.pops`, 'Vigilante') === 1, 'POP publicado aparece para o vigilante');
+ok((await tenta('Enfermeiro', `update public.pops set titulo = 'x' where id = ${popId}`)).n === 0, 'enfermeiro NÃO altera POP');
+ok((await db.query(`select count(*)::int n from public.pop_versoes where pop_id = ${popId}`)).rows[0].n === 1, 'histórico guarda a versão 1.0 ao cadastrar');
+await tenta('Gestor Assistencial', `update public.pops set versao = '2.0', data_ultima_revisao = '2032-05-01', resumo_alteracao = 'Incluído o 5º momento', arquivo_path = 'u/v2.pdf', arquivo_nome = 'v2.pdf' where id = ${popId}`);
+const hv = (await db.query(`select versao, resumo, arquivo_path from public.pop_versoes where pop_id = ${popId} order by versao`)).rows;
+ok(hv.length === 2 && hv[1].versao === '2.0' && hv[1].resumo === 'Incluído o 5º momento' && hv[1].arquivo_path === 'u/v2.pdf', 'nova versão entra no histórico com resumo e arquivo');
+ok(await lerN(`select * from public.pop_versoes`, 'Enfermeiro') === 2, 'enfermeiro vê o histórico de POP publicado');
+await tenta('Gestor Assistencial', `update public.pops set arquivo_path = 'u/v2b.pdf' where id = ${popId}`);
+ok((await db.query(`select arquivo_path from public.pop_versoes where pop_id = ${popId} and versao = '2.0'`)).rows[0].arquivo_path === 'u/v2b.pdf' && (await db.query(`select count(*)::int n from public.pop_versoes where pop_id = ${popId}`)).rows[0].n === 2, 'trocar só o arquivo atualiza a versão atual sem duplicar');
+ok(!(await tenta('Gestor Assistencial', `insert into public.pop_versoes (pop_id, versao, data) values (${popId}, '9', current_date)`)).ok, 'ninguém grava o histórico direto');
+await tenta('Gestor Assistencial', `update public.pops set status = 'em_revisao' where id = ${popId}`);
+ok(await lerN(`select * from public.pops`, 'Enfermeiro') === 0 && await lerN(`select * from public.pop_versoes`, 'Enfermeiro') === 0, 'POP em revisão some para quem não é gestor (inclusive o histórico)');
+// arquivos (storage)
+await db.exec(`reset role`);
+await db.exec(`update public.pops set status = 'publicado' where id = ${popId}`);
+ok((await tenta('Gestor Assistencial', `insert into storage.objects (bucket_id, name) values ('pops', 'u/novo.pdf') returning id`)).ok, 'gestor envia arquivo de POP');
+ok(!(await tenta('Enfermeiro', `insert into storage.objects (bucket_id, name) values ('pops', 'u/hack.pdf') returning id`)).ok, 'enfermeiro NÃO envia arquivo de POP');
+await db.exec(`reset role`); await db.exec(`insert into storage.objects (bucket_id, name) values ('pops', 'u/rascunho.pdf'), ('pops', 'u/v2b.pdf')`);
+ok(await lerN(`select * from storage.objects where bucket_id = 'pops' and name = 'u/v2b.pdf'`, 'Enfermeiro') === 1, 'enfermeiro lê arquivo de POP publicado');
+ok(await lerN(`select * from storage.objects where bucket_id = 'pops' and name = 'u/rascunho.pdf'`, 'Enfermeiro') === 0, 'enfermeiro NÃO lê arquivo que não é de POP publicado');
+ok(await lerN(`select * from storage.objects where bucket_id = 'pops' and name = 'u/rascunho.pdf'`, 'Gestor Assistencial') === 1, 'gestor lê qualquer arquivo de POP');
+ok((await tenta('Gestor Assistencial', `delete from public.pops where id = ${popId}`)).n === 0 && (await tenta('Gestor Administrativo', `delete from public.pops where id = ${popId}`)).n === 1, 'só o Gestor Administrativo exclui POP');
+ok((await db.query(`select count(*)::int n from public.pop_versoes where pop_id = ${popId}`)).rows[0].n === 0, 'excluir o POP leva o histórico junto');
 
 console.log(`\n${total - falhas}/${total} verificações passaram.`);
 process.exit(falhas ? 1 : 0);

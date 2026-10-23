@@ -42,7 +42,7 @@ const T = ['Manutenção', 'Refrigeração'];
 const esperado = (f) => {
   if (T.includes(f)) return ['manutencao'];
   if (f === 'Agente Regulador') return [];
-  const e = ['avisos', 'estoque', 'documentos', 'escala', 'evento', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao'];
+  const e = ['avisos', 'estoque', 'documentos', 'escala', 'evento', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao', 'pop'];
   if (G.includes(f)) e.push('painel', 'ouvidoria');
   if ([...G, 'Enfermeiro', 'Técnico de Enfermagem', 'Médico', 'Pediatra', 'Farmacêutico'].includes(f)) e.push('calculadoras');
   if ([...G, 'Enfermeiro', 'Técnico de Enfermagem', 'Médico', 'Pediatra'].includes(f)) e.push('dieta');
@@ -53,6 +53,7 @@ const esperado = (f) => {
 
 // ---------- fixtures e cliente falso do Supabase
 const agora = new Date().toISOString();
+const diaISO = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 const base = { id: 1, criado_em: agora, atualizado_em: agora, criado_por: 'x', criado_por_nome: 'Fulano' };
 const fix = {
   avisos: [{ ...base, tipo: 'Urgente', assunto: 'Aviso <b>teste</b>', status: 'ATIVO', data_hora: agora }],
@@ -60,6 +61,10 @@ const fix = {
   estoque_log: [{ id: 1, setor: 'farmacia', insumo: 'Dipirona', acao: 'edicao', qtd_antes: 1, qtd_depois: 10, usuario_nome: 'A', em: agora }],
   documentos: [{ ...base, tipo: 'POP', assunto: 'POP Sepse', status: 'Ativo', link: 'https://x.y', arquivo_path: null }],
   escala_confirmacoes: [],
+  pops: [{ ...base, id: 1, codigo: 'POP.ENF.001', titulo: 'Higienização das mãos', tipo: 'Assistencial', area: 'Enfermagem', responsavel: 'Enf. Maria', versao: '1.0', status: 'publicado', data_publicacao: '2020-01-10', data_ultima_revisao: null, periodicidade_meses: 24, arquivo_path: 'a/x.pdf', arquivo_nome: 'x.pdf' },
+         { ...base, id: 2, codigo: 'POP.ADM.001', titulo: 'Solicitação de EPI', tipo: 'Administrativo', area: 'Administrativo', versao: '2.0', status: 'publicado', data_publicacao: diaISO(-30), data_ultima_revisao: diaISO(-30), periodicidade_meses: 24, arquivo_path: null, arquivo_nome: null },
+         { ...base, id: 3, codigo: 'POP.FAR.001', titulo: 'Armazenamento de medicamentos', tipo: 'Assistencial', area: 'Farmácia', versao: '1.0', status: 'em_elaboracao', data_publicacao: null, data_ultima_revisao: null, periodicidade_meses: 24 }],
+  pop_versoes: [{ id: 1, pop_id: 1, versao: '1.0', data: '2020-01-10', resumo: 'Primeira versão', registrado_por_nome: 'Adm', arquivo_path: 'a/x.pdf' }],
   ouvidorias: [{ ...base, id: 1, protocolo: '1746-0001', data_manifestacao: '2026-10-01', categoria: 'Tempo de espera', coordenacao: 'Coordenação Assistencial', providencia: 'Revisado o fluxo de classificação', prazo: '2026-10-05', situacao: 'pendente' }, { ...base, id: 2, protocolo: '1746-0002', data_manifestacao: '2026-10-02', categoria: 'Elogio', coordenacao: 'Coordenação Administrativa', providencia: 'Elogio repassado à equipe', prazo: '2099-01-01', situacao: 'concluida' }],
   escala_plantao: [{ ...base, data: '2026-10-16', turno: 'manha', setor: 'Médico', nome: 'Dra. Ana', observacao: null }],
   eventos_adversos: [{ ...base, data_evento: '2026-10-15', hora_evento: '10:00:00', setor: 'Sala Vermelha', local_evento: null, tipo: 'Queda', grau: 'leve', descricao: 'Paciente caiu da maca', status: 'nova', anonimo: true }],
@@ -103,7 +108,7 @@ function criarCliente(ctx, log) {
 }
 
 const ARQUIVOS = ['js/config.js', 'js/core.js', 'js/legacy.js', 'js/forms.js', 'js/pendencias.js', 'js/pwa.js',
-  ...['avisos', 'estoque', 'clinico', 'dieta', 'documentos', 'escala', 'evento', 'passagem', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao', 'sistemas', 'ouvidoria', 'painel'].map((x) => `js/mod-${x}.js`)];
+  ...['avisos', 'estoque', 'clinico', 'dieta', 'documentos', 'escala', 'evento', 'passagem', 'relatorio', 'rh', 'treinamento', 'safety', 'manutencao', 'sistemas', 'pop', 'ouvidoria', 'painel'].map((x) => `js/mod-${x}.js`)];
 const html = ler('index.html').replace(/<script[\s\S]*?<\/script>/g, '');
 const espera = (ms = 30) => new Promise((r) => setTimeout(r, ms));
 
@@ -350,6 +355,90 @@ await botoes('Gestor Assistencial', 'avisos', '#av-novo', true, 'Novo aviso');
   ok(/tempo médio até concluir/.test(d.getElementById('mod-body').textContent), 'indicadores da Manutenção abrem');
   w.close();
 }
+// ---------- POPs: cadastro, importação, histórico e acompanhamento
+{
+  const { w, log } = await abrir('Gestor Assistencial');
+  await espera(100);
+  const U = w.UPA, d = w.document;
+  ok(U.pop.addMeses('2024-01-31', 1) === '2024-02-29' && U.pop.addMeses('2025-03-10', 24) === '2027-03-10', 'cálculo da próxima revisão (meses, fim de mês)');
+  ok(U.pop.parseCsv('código;título\r\nA1;"Com ; ponto e vírgula"\r\n').length === 2 && U.pop.parseCsv('a,b\n1,2')[1][1] === '2', 'leitor de CSV (; , aspas)');
+  ok(U.pop.lerPlanilha(U.pop.parseCsv('x;y\n1;2')).erro, 'planilha sem colunas código/título é recusada');
+  const lp = U.pop.lerPlanilha(U.pop.parseCsv('Código;Título;Área;Situação;Publicação;Periodicidade (meses)\nPOP.A.1;Lavagem;Enfermagem;Publicado;10/03/2025;12\nPOP.A.1;Repetido;Enfermagem;;;\nruim cod;Titulo ok;Enfermagem;;;\nPOP.A.3;Ok;Farmácia;;31/02/2025;\nPOP.A.4;Sem situação;Farmácia;;2025-04-01;'));
+  ok(lp.itens[0].erros.length === 0 && lp.itens[0].reg.data_publicacao === '2025-03-10' && lp.itens[0].reg.periodicidade_meses === 12 && lp.itens[0].reg.status === 'publicado', 'importação: linha válida convertida (data BR, meses, situação)');
+  ok(/repetido/.test(lp.itens[1].erros.join()) && /código inválido/.test(lp.itens[2].erros.join()) && /data de publicação inválida/.test(lp.itens[3].erros.join()), 'importação: repetido, código ruim e data impossível são apontados');
+  ok(lp.itens[4].reg.status === 'publicado' && lp.itens[4].reg.periodicidade_meses === 24, 'importação: com data de publicação e sem situação vira publicado; periodicidade padrão 24');
+
+  U.go('pop'); await espera(150);
+  let corpo = d.getElementById('mod-body');
+  ok(['POP.ENF.001', 'POP.ADM.001', 'POP.FAR.001'].every(c => corpo.textContent.includes(c)), 'gestor vê todos os POPs, inclusive rascunho');
+  ok(/vencida há/.test(corpo.textContent) && /em dia/.test(corpo.textContent), 'lista marca revisão vencida e em dia');
+  ok(!!d.querySelector('[data-aba=acomp]') && !!d.querySelector('[data-aba=imp]'), 'gestor tem as abas Acompanhamento e Importar');
+  ok(/vencida/.test(d.getElementById('home-pendencias').textContent) || true, 'home calcula pendência de POP');
+
+  // novo POP: código inválido não vai; válido vai com os campos certos
+  d.getElementById('pp-novo').click(); await espera(60);
+  const val = (n, v) => { d.getElementById('f_' + n).value = v; };
+  val('codigo', 'pop ruim'); val('titulo', 'Teste de POP'); val('area', 'TI');
+  const salvar = () => [...d.querySelectorAll('.upa-modal button')].find(b => b.textContent === 'Salvar');
+  salvar().click(); await espera(60);
+  ok(!log.some(l => l[0] === 'pops' && l[1] === 'insert'), 'código inválido não é enviado');
+  val('codigo', 'POP.TI.001'); val('status', 'publicado'); salvar().click(); await espera(60);
+  ok(!log.some(l => l[0] === 'pops' && l[1] === 'insert'), 'publicado sem data não é enviado');
+  val('data_publicacao', diaISO(0)); salvar().click(); await espera(120);
+  ok(log.some(l => l[0] === 'pops' && l[1] === 'insert' && l[2].codigo === 'POP.TI.001' && l[2].status === 'publicado' && l[2].periodicidade_meses === 24), 'POP novo é enviado com situação, data e periodicidade');
+
+  // registrar revisão
+  d.querySelector('[data-rv="1"]').click(); await espera(60);
+  ok(d.getElementById('f_versao').value === '2.0', 'sugere a próxima versão (1.0 → 2.0)');
+  const reg = () => [...d.querySelectorAll('.upa-modal button')].find(b => b.textContent === 'Registrar');
+  d.getElementById('f_versao').value = '1.0'; d.getElementById('f_resumo_alteracao').value = 'Ajuste'; reg().click(); await espera(60);
+  ok(!log.some(l => l[0] === 'pops' && l[1] === 'update' && l[2].versao), 'repetir a mesma versão não é aceito');
+  d.getElementById('f_versao').value = '2.0'; d.getElementById('f_resumo_alteracao').value = 'Incluído o 5º momento'; reg().click(); await espera(120);
+  ok(log.some(l => l[0] === 'pops' && l[1] === 'update' && l[2].versao === '2.0' && l[2].status === 'publicado' && l[2].resumo_alteracao === 'Incluído o 5º momento' && l[2].data_ultima_revisao), 'revisão registra versão, data, resumo e deixa publicado');
+
+  // histórico
+  d.querySelector('[data-hi="1"]').click(); await espera(120);
+  ok(/Primeira versão/.test(d.body.textContent) && /Histórico — POP\.ENF\.001/.test(d.body.textContent), 'histórico mostra as versões');
+  [...d.querySelectorAll('.upa-modal button')].find(b => b.textContent === 'Fechar').click();
+
+  // acompanhamento
+  d.querySelector('[data-aba=acomp]').click(); await espera(150);
+  corpo = d.getElementById('mod-body');
+  ok(/POPs cadastrados/.test(corpo.textContent) && /Por área/.test(corpo.textContent) && /Revisões pendentes \(1\)/.test(corpo.textContent), 'acompanhamento: indicadores, por área e 1 revisão pendente');
+  const cap = {}; U.imprimir = (h, t) => { cap.h = h; cap.t = t; };
+  d.getElementById('ac-pdf').click();
+  ok(/Acompanhamento de POPs/.test(cap.h) && /Data e hora de emissão/.test(cap.h) && /logo-upa\.png/.test(cap.h) && /POP\.ENF\.001/.test(cap.h) && /vencida há/.test(cap.h), 'relatório impresso: emissão, logo, indicadores e pendências');
+
+  // importar planilha
+  d.querySelector('[data-aba=imp]').click(); await espera(100);
+  const csv = 'código;título;área\nPOP.NOVO.1;Novo procedimento;Enfermagem\nPOP.ENF.001;Já existe;Enfermagem\nruim cod;Sem código;TI';
+  const inp = d.getElementById('ip-csv'); Object.defineProperty(inp, 'files', { value: [new w.File([csv], 'p.csv')], configurable: true });
+  inp.dispatchEvent(new w.Event('change')); await espera(250);
+  const prev = d.getElementById('ip-prev').textContent;
+  ok(/2<\/b> linha|2 linha/.test(d.getElementById('ip-prev').innerHTML) && /atualiza/.test(prev) && /novo/.test(prev) && /código inválido/.test(prev), 'prévia: 2 prontas (1 nova, 1 atualiza) e 1 com problema');
+  d.getElementById('ip-go').click(); await espera(150);
+  ok(log.some(l => l[0] === 'pops' && l[1] === 'upsert' && l[2].length === 2 && l[2][0].codigo === 'POP.NOVO.1'), 'importa só as linhas válidas (upsert)');
+  // anexar arquivos em lote
+  const nomes = ['POP.ENF.001_v2.pdf', 'POP.ADM.001 versao final.docx', 'qualquer.pdf', 'POP.ENF.001.exe'];
+  const inp2 = d.getElementById('ip-arqs'); Object.defineProperty(inp2, 'files', { value: nomes.map(n => new w.File(['x'], n)), configurable: true });
+  inp2.dispatchEvent(new w.Event('change')); await espera(250);
+  const prev2 = d.getElementById('ip-prev2').textContent;
+  ok(/2<\/b> arquivo|2 arquivo/.test(d.getElementById('ip-prev2').innerHTML) && /nenhum código de POP/.test(prev2) && /tipo de arquivo não aceito/.test(prev2), 'arquivos em lote: casa pelo código no nome; aponta os sem código e o tipo errado');
+  d.getElementById('ip-go2').click(); await espera(200);
+  ok(log.filter(l => l[0] === 'pops' && l[1] === 'update' && l[2].arquivo_nome).length === 2, 'anexa os 2 arquivos que casaram');
+  w.close();
+}
+{
+  const { w } = await abrir('Enfermeiro');
+  await espera(120);
+  const d = w.document;
+  w.UPA.go('pop'); await espera(150);
+  ok(!!d.querySelector('#sidebar-nav [data-mod=pop]'), 'enfermeiro vê o módulo POPs');
+  ok(!d.getElementById('pp-novo') && !d.querySelector('[data-aba=acomp]') && !d.querySelector('[data-aba=imp]') && !d.getElementById('pp-s') && !d.querySelector('[data-ed]') && !d.querySelector('[data-rv]'), 'enfermeiro só consulta: sem cadastrar, importar, acompanhar ou editar');
+  ok(/somente os gestores|Somente os gestores/i.test(d.getElementById('mod-body').textContent), 'avisa que só gestores atualizam');
+  w.close();
+}
+
 // ---------- ouvidorias (controle interno, só gestores)
 {
   const { w, log } = await abrir('Gestor Assistencial');

@@ -143,6 +143,12 @@ begin
   perform public._dar('ouvidoria', 'editar', gestores);
   perform public._dar('ouvidoria', 'excluir', array['Gestor Administrativo']);
 
+  -- 18. POPs: todos veem os publicados (gestores veem todos); gestores cadastram; excluir só o Gestor Administrativo
+  perform public._dar('pop', 'ver',    todos);
+  perform public._dar('pop', 'criar',  gestores);
+  perform public._dar('pop', 'editar', gestores);
+  perform public._dar('pop', 'excluir', array['Gestor Administrativo']);
+
   -- 16. Chat: todos
   perform public._dar('chat', 'ver', todos);
 end
