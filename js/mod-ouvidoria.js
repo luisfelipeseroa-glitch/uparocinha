@@ -97,6 +97,73 @@
     desenhar();
   }
 
+  /* ---------- aba: importar (histórico em planilha CSV) ---------- */
+  const normT = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const COLS_IMP = { protocolo: 'protocolo', data: 'data_manifestacao', datamanifestacao: 'data_manifestacao', categoria: 'categoria', coordenacao: 'coordenacao',
+    providencia: 'providencia', prazo: 'prazo', situacao: 'situacao' };
+  const SIT_TXT = { pendente: 'pendente', emandamento: 'em_andamento', andamento: 'em_andamento', concluida: 'concluida', concluido: 'concluida', naoseaplica: 'sem_acao', semacao: 'sem_acao' };
+  function dataBr(v) {
+    v = String(v || '').trim(); if (!v) return { ok: true, v: null };
+    let m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/), a, mm, d;
+    if (m) { [, a, mm, d] = m; } else if ((m = v.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/))) { [, d, mm, a] = m; } else return { ok: false };
+    const dt = new Date(Date.UTC(+a, +mm - 1, +d));
+    if (dt.getUTCFullYear() !== +a || dt.getUTCMonth() !== +mm - 1 || dt.getUTCDate() !== +d) return { ok: false };
+    return { ok: true, v: dt.toISOString().slice(0, 10) };
+  }
+  /* converte as linhas do CSV em registros validados com as mesmas regras do banco: [{linha, reg, erros[]}] */
+  function lerPlanilha(linhas) {
+    if (linhas.length < 2) return { erro: 'A planilha precisa ter o cabeçalho e ao menos uma linha.' };
+    const mapa = linhas[0].map(h => COLS_IMP[normT(h)] || null);
+    if (!mapa.includes('protocolo') || !mapa.includes('data_manifestacao')) return { erro: 'O cabeçalho precisa ter as colunas "protocolo" e "data".' };
+    const vistos = new Set();
+    return { itens: linhas.slice(1).map((l, i) => {
+      const r = {}; mapa.forEach((c, k) => { if (c) r[c] = (l[k] || '').trim(); });
+      const erros = [], reg = {};
+      reg.protocolo = r.protocolo || '';
+      if (!RX_PROTOCOLO.test(reg.protocolo)) erros.push('protocolo inválido');
+      else if (vistos.has(reg.protocolo.toLowerCase())) erros.push('protocolo repetido na planilha'); else vistos.add(reg.protocolo.toLowerCase());
+      const dm = dataBr(r.data_manifestacao); if (!dm.ok || !dm.v) erros.push('data inválida'); reg.data_manifestacao = dm.v;
+      const cat = CATEGORIAS.find(c => normT(c) === normT(r.categoria)); reg.categoria = cat || 'Outros'; if (r.categoria && !cat) erros.push('categoria não reconhecida');
+      const co = COORDS.find(c => normT(c) === normT(r.coordenacao)); reg.coordenacao = co || ''; if (!co) erros.push('coordenação inválida');
+      reg.providencia = r.providencia || ''; const pv = reg.providencia.trim();
+      if (pv.length < 5 || pv.length > 500) erros.push('providência deve ter de 5 a 500 caracteres'); else if (RX_DADOS.test(pv)) erros.push('providência com cara de telefone/CPF/e-mail');
+      const pz = dataBr(r.prazo); if (!pz.ok) erros.push('prazo inválido'); reg.prazo = pz.v || dm.v;
+      if (dm.v && reg.prazo && reg.prazo < dm.v) erros.push('prazo antes da data');
+      reg.situacao = r.situacao ? SIT_TXT[normT(r.situacao)] : 'pendente'; if (!reg.situacao) erros.push('situação não reconhecida');
+      return { linha: i + 2, reg, erros };
+    }) };
+  }
+  U.ouvidoria = { lerPlanilha };   // exposto também para os testes
+
+  function importar(el) {
+    const parse = U.pop && U.pop.parseCsv;
+    el.innerHTML = `<div class="cx"><h3 style="margin-bottom:4px">Importar histórico de ouvidorias</h3>
+      <p class="ajuda" style="margin-bottom:8px">Cadastra várias de uma vez a partir de um arquivo <b>CSV</b> (no Excel: <i>Salvar como → CSV</i>). Colunas: protocolo, data, categoria, coordenação, providência, prazo, situação. Protocolos que já estão no sistema são <b>pulados</b> (nada é alterado). As mesmas regras do cadastro valem aqui: sem nome de paciente, relato, CPF, telefone ou e-mail.</p>
+      <div class="barra"><button class="btn btn-ghost" id="io-modelo"><i class="fas fa-download"></i> Baixar modelo</button><input type="file" id="io-csv" accept=".csv,.txt"></div><div id="io-prev"></div></div>`;
+    el.querySelector('#io-modelo').onclick = () => U.baixarCsv('modelo_importacao_ouvidorias.csv', ['protocolo', 'data', 'categoria', 'coordenação', 'providência', 'prazo', 'situação'],
+      [['24009430', '23/09/2026', 'Tempo de espera', 'Coordenação Administrativa', 'Fluxo de classificação revisado com a equipe', '30/09/2026', 'Em andamento']]);
+    el.querySelector('#io-csv').onchange = async e => {
+      const prev = el.querySelector('#io-prev'); const f = e.target.files[0]; if (!f) return;
+      let r; try { r = lerPlanilha(parse(await f.text())); } catch (x) { r = { erro: 'Não foi possível ler o arquivo.' }; }
+      if (r.erro) { prev.innerHTML = `<div class="somente-leitura" style="margin-top:8px">${esc(r.erro)}</div>`; return; }
+      const existentes = new Set((await carregar()).map(o => o.protocolo.toLowerCase()));
+      const jaTem = i => existentes.has(i.reg.protocolo.toLowerCase());
+      const ok = r.itens.filter(i => !i.erros.length && !jaTem(i));
+      prev.innerHTML = `<p style="margin:10px 0 6px"><b>${ok.length}</b> nova(s) · ${r.itens.filter(i => !i.erros.length && jaTem(i)).length} já cadastrada(s) (puladas) · <b style="color:#B91C1C">${r.itens.filter(i => i.erros.length).length}</b> com problema</p>` +
+        U.tabela([{ t: 'Linha', f: i => i.linha }, { t: 'Protocolo', f: i => esc(i.reg.protocolo) }, { t: 'Data', f: i => i.reg.data_manifestacao ? U.fmtData(i.reg.data_manifestacao) : '—' }, { t: 'Categoria', f: i => esc(i.reg.categoria) }, { t: 'Coordenação', f: i => esc(i.reg.coordenacao) },
+          { t: 'Resultado', f: i => i.erros.length ? `<span class="tag vermelho">${esc(i.erros.join('; '))}</span>` : jaTem(i) ? '<span class="tag azul">já existe</span>' : '<span class="tag verde">novo</span>' }], r.itens, '') +
+        (ok.length ? `<div class="barra" style="margin-top:8px"><button class="btn btn-primary" id="io-go"><i class="fas fa-file-import"></i> Importar ${ok.length} ouvidoria(s)</button></div>` : '');
+      const go = prev.querySelector('#io-go');
+      if (go) go.onclick = async () => {
+        go.disabled = true; let feitos = 0;
+        try {
+          for (let k = 0; k < ok.length; k += 100) { const lote = ok.slice(k, k + 100); await U.db(window.sb.from('ouvidorias').insert(lote.map(i => i.reg))); feitos += lote.length; }
+          U.toast(`${feitos} ouvidoria(s) importada(s).`); prev.innerHTML = `<div class="somente-leitura" style="margin-top:8px"><i class="fas fa-circle-check"></i> ${feitos} ouvidoria(s) importada(s). Veja na aba <b>Registros</b>.</div>`;
+        } catch (x) { go.disabled = false; U.erro(new Error(`Importadas ${feitos} de ${ok.length}. ${x.message || x}`)); }
+      };
+    };
+  }
+
   async function resumo(el) {
     const dados = await carregar();
     const conta = (lista, chave, ordem) => ordem.map(n => { const l = lista.filter(o => o[chave] === n); return { n, total: l.length, abertas: l.filter(aberta).length, venc: l.filter(vencida).length, conc: l.filter(o => o.situacao === 'concluida').length }; });
@@ -120,7 +187,7 @@
       });
     },
     render(el) {
-      U.abas(el, [{ id: 'reg', rotulo: 'Registros', render: registros }, { id: 'res', rotulo: 'Resumo', render: resumo }]);
+      U.abas(el, [{ id: 'reg', rotulo: 'Registros', render: registros }, { id: 'res', rotulo: 'Resumo', render: resumo }, ...(U.can('ouvidoria', 'criar') ? [{ id: 'imp', rotulo: 'Importar', render: importar }] : [])]);
     },
   });
 })();

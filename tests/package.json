@@ -2,6 +2,6 @@
   "name": "upa-rocinha-testes",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node rls.test.mjs && node frontend.test.mjs && node importador.test.mjs" },
+  "scripts": { "test": "node rls.test.mjs && node frontend.test.mjs && node importador.test.mjs && node ouvidoria-import.test.mjs" },
   "devDependencies": { "@electric-sql/pglite": "^0.3.0", "jsdom": "^26.0.0" }
 }
