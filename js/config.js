@@ -1,5 +1,5 @@
 /* =====================================================================
-   CONFIGURAÇÃO — Gestão Inteligente UPA Rocinha
+   CONFIGURAÇÃO — GIUS | Colaboradores UPA Rocinha
    A chave "anon" do Supabase É PÚBLICA por desenho: quem protege os dados
    são as regras do banco (RLS) — veja supabase/*.sql. Nunca coloque aqui
    a chave "service_role".

@@ -1,5 +1,5 @@
 -- =====================================================================
--- 01_base.sql — GESTÃO INTELIGENTE UPA ROCINHA
+-- 01_base.sql — GIUS | COLABORADORES UPA ROCINHA
 -- Funções, perfis, matriz de permissões e funções de checagem.
 --
 -- COMO RODAR: Supabase → SQL Editor → New query → colar tudo → Run.

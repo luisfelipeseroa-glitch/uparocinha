@@ -1,6 +1,6 @@
-# Gestão Inteligente UPA Rocinha
+# GIUS | Colaboradores UPA Rocinha
 
-Sistema interno da UPA Rocinha (GitHub Pages + Supabase).
+**GIUS** (Gestão Inteligente nas Unidades de Saúde) — sistema interno dos colaboradores da UPA Rocinha (GitHub Pages + Supabase).
 Para colocar no ar e entender as permissões: **[supabase/LEIA-ME.md](supabase/LEIA-ME.md)**.
 
 - `index.html`, `css/`, `js/` — o site (módulos em `js/mod-*.js`, regras de acesso em `supabase/02_permissoes.sql`)

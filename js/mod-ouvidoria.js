@@ -199,7 +199,7 @@
       <h3 style="margin-top:12px">Por coordenação</h3>${tabela(['Coordenação', 'Total', 'Em aberto', 'Vencidas', 'Concluídas'], linhasConta(dados, 'coordenacao', COORDS))}
       <h3 style="margin-top:12px">Ações em aberto (${pend.length})</h3>` +
       (pend.length ? tabela(['Protocolo', 'Data', 'Categoria', 'Coordenação', 'Providência', 'Prazo'], pend.map(o => [`<b>${esc(o.protocolo)}</b>`, U.fmtData(o.data_manifestacao), esc(o.categoria), esc(o.coordenacao), esc(o.providencia), `${U.fmtData(o.prazo)}${vencida(o) ? ` <b style="color:#B91C1C">(vencido há ${-dias(o.prazo)} d)</b>` : ''}`])) : '<p>Nenhuma ação em aberto.</p>') +
-      '<p class="sub" style="margin-top:12px;font-size:10px">Emitido pelo sistema Gestão Inteligente UPA Rocinha. Controle interno: não substitui a plataforma oficial 1746 e não guarda nome de paciente, relato nem dado clínico. Registros importados do histórico podem ter data estimada e situação "Não se aplica".</p>', 'Relatório de Ouvidorias');
+      '<p class="sub" style="margin-top:12px;font-size:10px">Emitido pelo sistema GIUS | Colaboradores UPA Rocinha. Controle interno: não substitui a plataforma oficial 1746 e não guarda nome de paciente, relato nem dado clínico. Registros importados do histórico podem ter data estimada e situação "Não se aplica".</p>', 'Relatório de Ouvidorias');
   }
 
   U.registrar({

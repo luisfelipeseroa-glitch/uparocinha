@@ -53,7 +53,7 @@
               ${linha('Responsável pela confirmação', situ === 'nao' ? '—' : `<b>${esc(conf.confirmado_por_nome || '—')}</b>${conf.confirmado_matricula ? ' · matrícula ' + esc(conf.confirmado_matricula) : ''}${conf.confirmado_funcao ? ' · ' + esc(conf.confirmado_funcao) : ''}<br>em ${U.fmtDH(conf.confirmado_em)}${situ === 'alterada' ? ' (V' + conf.versao + ')' : ''}`)}
             </tbody></table>` +
             (setores.length ? `<table><thead><tr><th style="width:26%">Setor</th><th>Profissionais</th></tr></thead><tbody>${setores.map(st => `<tr><td><b>${esc(st)}</b></td><td>${por[st].map(r => esc(r.nome) + (r.observacao ? ' (' + esc(r.observacao) + ')' : '')).join('<br>')}</td></tr>`).join('')}</tbody></table>` : '<p>Sem lançamentos.</p>') +
-            `<p class="sub" style="margin-top:14px;font-size:10px">Documento emitido pelo sistema Gestão Inteligente UPA Rocinha. Vale como confirmada somente a versão indicada acima; se a escala for alterada, uma nova versão deve ser confirmada. ${reg.length} lançamento(s).</p>`, 'Escala de plantão ' + cod);
+            `<p class="sub" style="margin-top:14px;font-size:10px">Documento emitido pelo sistema GIUS | Colaboradores UPA Rocinha. Vale como confirmada somente a versão indicada acima; se a escala for alterada, uma nova versão deve ser confirmada. ${reg.length} lançamento(s).</p>`, 'Escala de plantão ' + cod);
         };
         const bConf = el.querySelector('#es-conf');
         if (bConf) bConf.onclick = async () => {

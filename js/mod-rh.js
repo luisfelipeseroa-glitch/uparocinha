@@ -53,7 +53,7 @@
         ${sig(r.assinatura, r.criado_por_nome, r.profissao, r.matricula, r.criado_em)}
         ${r.tipo === 'troca' ? sig(r.segundo_assinatura, r.segundo_nome, '2º membro da troca', r.segundo_matricula, r.segundo_em) : ''}
         ${r.status === 'autorizada' ? sig(r.assinatura_gestor, r.decidido_por_nome, 'Gestor', '', r.decidido_em) : `<div class="assin" style="width:30%"><i style="color:#888">${r.status === 'recusada' ? 'Recusada: ' + esc(r.decisao_obs || '') : 'Aguardando autorização'}</i></div>`}</div>
-      <p style="text-align:center;font-size:10px;color:#888;margin-top:26px">Documento gerado em ${U.fmtDH(new Date())} — Gestão Inteligente UPA Rocinha</p>`, 'Documento RH');
+      <p style="text-align:center;font-size:10px;color:#888;margin-top:26px">Documento gerado em ${U.fmtDH(new Date())} — GIUS | Colaboradores UPA Rocinha</p>`, 'Documento RH');
   }
 
   /* janela de assinatura (retorna dataURL ou null) */

@@ -1,5 +1,5 @@
 /* =====================================================================
-   ADIÇÃO AO APPS SCRIPT — GESTÃO INTELIGENTE UPA ROCINHA
+   ADIÇÃO AO APPS SCRIPT — GIUS | COLABORADORES UPA ROCINHA
    =====================================================================
 
    COMO USAR:

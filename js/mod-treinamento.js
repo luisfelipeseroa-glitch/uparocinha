@@ -44,7 +44,7 @@
 
       <div style="position:absolute;left:20mm;right:20mm;top:12mm;display:flex;justify-content:space-between;align-items:center">
         <img src="${abs('img/logo-upa.png')}" style="height:19mm">
-        <div style="text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;letter-spacing:.35em;color:#6B4FD8;font-weight:700">UPA ROCINHA · GESTÃO INTELIGENTE</div>
+        <div style="text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;letter-spacing:.35em;color:#6B4FD8;font-weight:700">GIUS · COLABORADORES UPA ROCINHA</div>
         <img src="${abs('img/logo-gnosis.jpg')}" style="height:15mm;mix-blend-mode:multiply">
       </div>
 

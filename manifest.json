@@ -1,7 +1,7 @@
 {
-  "name": "Gestão Inteligente UPA Rocinha",
-  "short_name": "UPA Rocinha",
-  "description": "Sistema de gestão inteligente da UPA Rocinha — Prefeitura do Rio de Janeiro",
+  "name": "GIUS | Colaboradores UPA Rocinha",
+  "short_name": "GIUS",
+  "description": "GIUS — Gestão Inteligente nas Unidades de Saúde | Colaboradores UPA Rocinha — Prefeitura do Rio de Janeiro",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * IMPORTADOR DE USUÁRIOS — Gestão Inteligente UPA Rocinha
+ * IMPORTADOR DE USUÁRIOS — GIUS | Colaboradores UPA Rocinha
  *
  * Lê a lista de funcionários (CSV), cria o login de cada um no Supabase
  * (matrícula + senha) e grava o perfil (nome + função) que decide o que cada

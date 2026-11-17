@@ -311,7 +311,7 @@
         <h3>Por área</h3>${tabArea()}
         <h3 style="margin-top:12px">Revisões pendentes (${pend.length})</h3>` +
         (pend.length ? `<table><thead><tr><th>Código</th><th>POP</th><th>Área</th><th>Responsável</th><th>Versão</th><th>Próxima revisão</th></tr></thead><tbody>${pend.map(p => { const r = revisao(p); return `<tr><td><b>${esc(p.codigo)}</b></td><td>${esc(p.titulo)}</td><td>${esc(p.area)}</td><td>${esc(p.responsavel || '—')}</td><td>${esc(p.versao)}</td><td>${r.prox ? U.fmtData(r.prox) : 'sem data'} — ${r.cat === 'vencido' ? 'vencida há ' + (-r.d) + ' d' : r.cat === 'a_vencer' ? 'vence em ' + r.d + ' d' : 'sem data'}</td></tr>`; }).join('')}</tbody></table>` : '<p>Nenhum POP com revisão pendente.</p>') +
-        '<p class="sub" style="margin-top:12px;font-size:10px">Emitido pelo sistema Gestão Inteligente UPA Rocinha. A próxima revisão é calculada a partir da data da última revisão (ou da publicação) e da periodicidade de cada POP.</p>', 'Acompanhamento de POPs');
+        '<p class="sub" style="margin-top:12px;font-size:10px">Emitido pelo sistema GIUS | Colaboradores UPA Rocinha. A próxima revisão é calculada a partir da data da última revisão (ou da publicação) e da periodicidade de cada POP.</p>', 'Acompanhamento de POPs');
     };
   }
 
