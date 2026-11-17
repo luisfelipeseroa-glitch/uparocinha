@@ -1,7 +1,7 @@
 /* Service worker: primeiro a rede (sempre pega a versão nova do site); o cache só serve de reserva
    quando está sem internet. Nunca guarda respostas do Supabase nem de outros sites. */
-const CACHE_NAME = 'upa-rocinha-v9';
-const ASSETS = ['./', './index.html', './manifest.json', './css/app.css', './img/logo-upa.png', './img/logo-gnosis.jpg', './img/logo-gius-completa.png', './img/favicon-gius.png',
+const CACHE_NAME = 'upa-rocinha-v10';
+const ASSETS = ['./', './index.html', './manifest.json', './css/app.css', './img/logo-upa.png', './img/logo-gnosis.jpg', './img/logo-gius-completa.png', './img/favicon-gius.png', './img/logo-gius-horizontal.png',
   './js/config.js', './js/core.js', './js/forms.js', './js/legacy.js', './js/boot.js', './js/pendencias.js', './js/pwa.js', './icon-192.png', './icon-512.png',
   './js/vendor/supabase-2.45.4.js', './js/vendor/chart-4.4.4.umd.js'];
 
