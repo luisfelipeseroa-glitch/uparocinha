@@ -84,7 +84,7 @@
       box.innerHTML = lista.length ? lista.map(p => `<div class="cx" style="${p.status === 'cancelada' ? 'opacity:.7' : ''}">${layout(p)}
         <div class="barra" style="margin:10px 0 0"><button class="btn btn-ghost btn-sm" data-imp="${p.id}"><i class="fas fa-print"></i> Imprimir</button>
         ${U.can('dieta', 'editar') && p.status === 'solicitada' ? `<button class="btn btn-ghost btn-sm" data-can="${p.id}"><i class="fas fa-ban"></i> Cancelar solicitação</button>` : ''}</div></div>`).join('') : '<div class="vazio">Nenhuma solicitação neste dia.</div>';
-      box.querySelectorAll('[data-imp]').forEach(b => b.onclick = () => U.imprimir(layout(lista.find(p => p.id === b.dataset.imp)), 'Solicitação de dieta'));
+      box.querySelectorAll('[data-imp]').forEach(b => b.onclick = () => { const p = lista.find(x => x.id === b.dataset.imp); U.imprimir(U.cabecalho('UPA Rocinha', 'Serviço de nutrição') + layout(p) + U.rodape(p.criado_por_nome, p.cancelado_por_nome), 'Solicitação de dieta'); });
       box.querySelectorAll('[data-can]').forEach(b => b.onclick = async () => {
         const m = await U.pedirMotivo('Cancelar solicitação de dieta', 'A solicitação continuará visível, marcada como cancelada.');
         if (!m) return;

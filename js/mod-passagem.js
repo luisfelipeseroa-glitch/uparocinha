@@ -52,8 +52,8 @@
       el.querySelector('#pp-dia').onchange = e => { data = e.target.value || data; desenhar(); };
       el.querySelector('#pp-turno').onchange = e => { turno = e.target.value; desenhar(); };
       el.querySelector('#pp-imp').onclick = () => U.imprimir(
-        `<h2>Passagem de Plantão — UPA Rocinha</h2><div class="sub">${U.fmtData(data)} · ${esc(U.turnoNome(turno))} · emitido por ${esc(U.ctx.nome)} em ${U.fmtDH(new Date())}</div><br>` +
-        (lista.length ? `<table><thead><tr><th>Leito</th><th>Paciente</th><th>Prioridade</th><th>Diagnóstico</th><th>Pendências / intercorrências / obs.</th><th>Recebido</th></tr></thead><tbody>${lista.map(c => `<tr><td>${esc(c.leito)}</td><td>${esc(c.paciente)}</td><td>${PRI[c.prioridade][0]}</td><td>${esc(c.diagnostico)}</td><td>${[c.pendencia, c.intercorrencias, c.observacoes].filter(Boolean).map(esc).join('<br>')}</td><td>${c.recebido_em ? esc(c.recebido_por_nome) + '<br>' + U.fmtDH(c.recebido_em) : '—'}</td></tr>`).join('')}</tbody></table>` : '<p>Sem pacientes lançados.</p>'), 'Passagem de plantão');
+        U.cabecalho('Passagem de Plantão', `UPA Rocinha · ${U.fmtData(data)} · ${esc(U.turnoNome(turno))}`) +
+        (lista.length ? `<table><thead><tr><th>Leito</th><th>Paciente</th><th>Prioridade</th><th>Diagnóstico</th><th>Pendências / intercorrências / obs.</th><th>Recebido</th></tr></thead><tbody>${lista.map(c => `<tr><td>${esc(c.leito)}</td><td>${esc(c.paciente)}</td><td>${PRI[c.prioridade][0]}</td><td>${esc(c.diagnostico)}</td><td>${[c.pendencia, c.intercorrencias, c.observacoes].filter(Boolean).map(esc).join('<br>')}</td><td>${c.recebido_em ? esc(c.recebido_por_nome) + '<br>' + U.fmtDH(c.recebido_em) : '—'}</td></tr>`).join('')}</tbody></table>` : '<p>Sem pacientes lançados.</p>') + U.rodape(U.ctx.nome), 'Passagem de plantão');
 
       const novo = el.querySelector('#pp-novo');
       if (novo) novo.onclick = () => U.formulario({ titulo: 'Novo paciente na passagem', campos: CAMPOS, valores: { turno, lotacao: 'normal', prioridade: 'estavel' },

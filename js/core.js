@@ -197,6 +197,15 @@
   /* ---------------- impressão (documento em tela própria) ---------------- */
   /* opts: { paisagem: true } → A4 na horizontal, sem margem do navegador (a margem fica por conta do HTML);
      { margem: '15mm' } ajusta a margem da página. */
+  // Cabeçalho padrão dos documentos impressos (logo da UPA) e rodapé "Criado por ... | GIUS".
+  UPA.cabecalho = function (titulo, sub) {
+    const logo = new URL('img/logo-upa.png', location.href).href;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:3px solid #0B3A8C;padding-bottom:8px;margin-bottom:10px"><img src="${logo}" style="height:58px"><div style="text-align:right"><h2 style="margin:0;color:#0B3A8C">${UPA.esc(titulo)}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div></div>`;
+  };
+  UPA.rodape = function (criado, editado) {
+    const e = UPA.esc;
+    return `<p class="sub" style="margin-top:16px;font-size:10px;text-align:center;border-top:1px solid #ccc;padding-top:6px">Criado por ${e(criado || '—')}${editado ? ' · Editado por ' + e(editado) : ''} · Emitido em ${UPA.fmtDH(new Date())} | GIUS (Gestão Inteligente nas Unidades de Saúde)</p>`;
+  };
   UPA.imprimir = function (html, titulo, opts) {
     opts = opts || {};
     const f = document.createElement('iframe');

@@ -104,7 +104,7 @@
         if (h.foto_path) { try { url = await U.urlAssinada('safety-fotos', h.foto_path, 600); } catch (e) { /* segue sem foto */ } }
         const corpo = novoFormato(h) ? resumoHtml(h, url) : legadoHtml(h);
         U.modal({ titulo: 'Safety Huddle', largura: 760, corpo: `<div class="sh-doc">${corpo}</div>`,
-          botoes: [{ rotulo: 'Fechar' }, { rotulo: 'Imprimir / PDF', classe: 'btn-primary', acao: () => { U.imprimir(novoFormato(h) ? resumoHtml(h, url) : legadoHtml(h), 'Safety Huddle'); return false; } }] });
+          botoes: [{ rotulo: 'Fechar' }, { rotulo: 'Imprimir / PDF', classe: 'btn-primary', acao: () => { U.imprimir((novoFormato(h) ? resumoHtml(h, url) : U.cabecalho('Safety Huddle', 'UPA Rocinha') + legadoHtml(h)) + U.rodape(h.criado_por_nome), 'Safety Huddle'); return false; } }] });
       };
 
 

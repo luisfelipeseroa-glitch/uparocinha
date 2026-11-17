@@ -82,7 +82,7 @@
           const lin = ([['Cadastros', 'cadastros'], ['Classificados', 'classificados'], ['Atendidos', 'atendidos'], ['Raio-X', 'raio_x'], ...CORES.map(c => ['Classificação ' + c[0], 'class_' + c[0]]), ['Internações', 'internacoes'], ['Óbitos < 24h', 'obitos_menos_24h'], ['Óbitos ≥ 24h', 'obitos_mais_24h'], ['AVC', 'avc'], ['IAM', 'iam'], ['Sepse', 'sepse'], ['SINAN', 'sinan']]).map(([r, k]) => `<tr><td>${r}</td><td>${nz(d[k])}</td></tr>`).join('') +
             ([['Espera média geral', 'tme_geral_min'], ...CORES.map(c => ['Espera ' + c[0], 'tme_' + c[0] + '_min']), ['Permanência média', 'permanencia_min']]).map(([r, k]) => `<tr><td>${r}</td><td>${fmtMin(d[k])}</td></tr>`).join('') +
             `<tr><td>Satisfação</td><td>${d.satisfacao == null ? '—' : Number(d.satisfacao).toFixed(1) + '%'}</td></tr>`;
-          U.imprimir(`<h2>Relatório Gerencial — UPA Rocinha</h2><div class="sub">${titulo}</div><br><table><tbody>${lin}</tbody></table>`, 'Relatório gerencial');
+          U.imprimir(U.cabecalho('Relatório Gerencial', 'UPA Rocinha · ' + titulo) + `<table><tbody>${lin}</tbody></table>` + U.rodape(U.ctx.nome), 'Relatório gerencial');
         };
         el.querySelector('#rg-xls').onclick = () => {
           const linhas = regs.map(r => CAMPOS.filter(c => c.n !== 'observacoes').map(c => (c.n === 'mes' ? MESES[r.mes - 1] : r[c.n] ?? '')));
