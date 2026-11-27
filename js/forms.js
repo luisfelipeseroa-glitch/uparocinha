@@ -106,9 +106,10 @@
     a.download = nome; document.body.appendChild(a); a.click(); a.remove();
   };
 
-  U.TURNOS = [['manha', 'Manhã (07h–13h)'], ['tarde', 'Tarde (13h–19h)'], ['noite', 'Noite (19h–07h)']];
-  U.turnoNome = t => (U.TURNOS.find(x => x[0] === t) || [t, t])[1];
-  U.turnoAtual = () => { const h = Number(new Date().toLocaleString('pt-BR', { hour: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo' })); return h >= 7 && h < 13 ? 'manha' : h >= 13 && h < 19 ? 'tarde' : 'noite'; };
+  /* Plantões de 12 h. O código interno 'manha' significa Dia (mantido para não mexer no banco). */
+  U.TURNOS = [['manha', 'Dia (07h–19h)'], ['noite', 'Noite (19h–07h)']];
+  U.turnoNome = t => t === 'tarde' ? 'Tarde (registro antigo)' : (U.TURNOS.find(x => x[0] === t) || [t, t])[1];
+  U.turnoAtual = () => { const h = Number(new Date().toLocaleString('pt-BR', { hour: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo' })); return h >= 7 && h < 19 ? 'manha' : 'noite'; };
 })();
 
 /* Data do plantão: o turno da noite que passa da meia-noite pertence ao dia anterior. */

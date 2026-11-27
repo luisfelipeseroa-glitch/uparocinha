@@ -34,7 +34,7 @@
         el.querySelector('#es-turno').onchange = e => { turno = e.target.value; desenhar(); };
         el.querySelector('#es-pdf').onclick = () => {
           const agora = new Date();
-          const letra = { manha: 'M', tarde: 'T', noite: 'N' }[turno] || '?';
+          const letra = { manha: 'D', noite: 'N' }[turno] || '?';
           const cod = `ESC-${dia.replace(/-/g, '')}-${letra}-` + (situ === 'ok' ? `V${conf.versao}` : 'RASC') + '-' + String(situ === 'ok' ? conf.hash : (hashAtual || '000000')).slice(0, 6).toUpperCase();
           const logo = new URL('img/logo-upa.png', location.href).href;
           const faixa = situ === 'ok'

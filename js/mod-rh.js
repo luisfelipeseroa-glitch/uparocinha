@@ -5,7 +5,7 @@
   const U = window.UPA, esc = U.esc;
   const TIPOS = { troca: 'Troca de plantão', extra: 'Plantão extra', rpa: 'RPA', ponto: 'Justificativa de ponto', atestado: 'Atestado médico' };
   const ST = { aguardando_colega: ['Aguardando colega', 'amarelo'], pendente: ['Aguardando autorização', 'azul'], autorizada: ['Autorizada', 'verde'], recusada: ['Recusada', 'vermelho'], cancelada: ['Cancelada', ''] };
-  const TURNO_R = ['Manhã', 'Tarde', 'Noite', 'Diurno 12h', 'Noturno 12h'];
+  const TURNO_R = ['Dia (07h–19h)', 'Noite (19h–07h)'];
   const CAMPOS_TIPO = {
     troca: [
       { n: 'dataOrigem', rotulo: 'Dia a ser trocado', tipo: 'date', obrig: true }, { n: 'turnoOrigem', rotulo: 'Turno do dia trocado', tipo: 'select', opcoes: TURNO_R, obrig: true },
