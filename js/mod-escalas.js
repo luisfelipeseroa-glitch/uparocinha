@@ -114,6 +114,7 @@
       const redesenhar = async () => { el.innerHTML = CSS + cabecalho() + '<div id="esc-corpo"></div>'; ligar(); await aba(); };
       const cabecalho = () => {
         const abas = [['equipe', 'Por equipe'], ['minha', 'Minha escala'], ['cobertura', 'Cobertura'], ['dp', 'Relatório DP']];
+        if (S.editor || S.config) abas.push(['ferias', 'Férias do ano'], ['pend', 'Pendências']);
         if (S.editor || S.config) abas.push(['alter', 'Alterações']);
         if (S.editor || S.config) abas.push(['rpa', 'RPA / Extra']);
         if (S.config) abas.push(['cadastro', 'Cadastro']);
@@ -133,7 +134,7 @@
       S.redesenharTudo = async () => { await carregarBase(); await carregarMes(); await redesenhar(); };
       const aba = async () => {
         const corpo = el.querySelector('#esc-corpo');
-        try { await ({ equipe: abaEquipe, minha: abaMinha, cobertura: abaCobertura, dp: abaDP, alter: abaAlter, rpa: abaRPA, cadastro: abaCadastro }[S.aba])(corpo); } catch (e) { corpo.innerHTML = `<div class="vazio">${esc(e.message)}</div>`; }
+        try { await ({ equipe: abaEquipe, minha: abaMinha, cobertura: abaCobertura, dp: abaDP, alter: abaAlter, ferias: abaFerias, pend: abaPend, rpa: abaRPA, cadastro: abaCadastro }[S.aba])(corpo); } catch (e) { corpo.innerHTML = `<div class="vazio">${esc(e.message)}</div>`; }
       };
       await redesenhar();
     },
@@ -209,10 +210,11 @@
       const n = contar(r, iso(S.ano, S.mes, d)); return n === null ? '<td>–</td>' : `<td class="${n < r.minimo ? 'esc-bad' : 'esc-ok'}">${n}</td>`;
     }).join('')}<td></td></tr>`).join('');
     corpo.innerHTML = `<div class="barra" style="margin-bottom:8px">${setoresOk.map(s => `<button class="btn ${s[0] === S.setor ? 'btn-primary' : 'btn-ghost'}" data-setor="${s[0]}">${s[1]}</button>`).join('')}
-        <span class="espaco"></span><button class="btn btn-ghost" id="es-imp"><i class="fas fa-print"></i> Imprimir</button></div>
+        <span class="espaco"></span>${S.editor ? '<button class="btn btn-primary" id="es-lote"><i class="fas fa-calendar-days"></i> Férias em lote</button>' : ''}<button class="btn btn-ghost" id="es-imp"><i class="fas fa-print"></i> Imprimir</button></div>
       <div class="esc-wrap"><table class="esc-tab"><thead>${cab}</thead><tbody>${linhas}${cobL ? `<tr class="esc-eq"><td colspan="${dias + 2}">Cobertura do dia (vermelho = abaixo do mínimo)</td></tr>${cobL}` : ''}</tbody></table></div>
       ${S.editor ? '<div class="ajuda">Toque num dia para corrigir, cobrir com RPA / Extra ou trocar o nome. Quem cobre aparece logo abaixo de quem saiu. Fica registrado quem alterou e o motivo.</div>' : ''}${legendaHtml()}`;
     corpo.querySelectorAll('[data-setor]').forEach(b => b.onclick = () => { S.setor = b.dataset.setor; abaEquipe(corpo); });
+    if (S.editor) corpo.querySelector('#es-lote').onclick = () => dlgLote();
     if (S.editor) corpo.querySelectorAll('.esc-cel').forEach(td => td.onclick = () => td.dataset.cob ? dlgCobrir(+td.dataset.cob, td.dataset.d, +td.dataset.sub) : dlgDia(+td.dataset.c, td.dataset.d));
     corpo.querySelector('#es-imp').onclick = () => imprimirSetor(S.setor, nomes, grupos, dd, regras);
   }
@@ -256,6 +258,7 @@
         <label class="fl">Observação (opcional)</label><input id="d-obs" maxlength="120" value="${esc(l ? l.observacao || '' : '')}">
         <label class="fl">Motivo da correção *</label><textarea id="d-mot" rows="2" maxlength="300" placeholder="Ex.: troca combinada com a coordenação"></textarea>`,
       botoes: [{ rotulo: 'Cancelar' },
+        ...(!saiu ? [{ rotulo: 'Férias em lote…', acao: (el, f) => { f(); dlgLote(id, data); return false; } }] : []),
         ...(!saiu ? [{ rotulo: 'Cobrir com RPA / Extra…', acao: (el, f) => { f(); dlgCobrir(id, data); return false; } }] : []),
         ...(!saiu && presenca(l) ? [{ rotulo: 'Trocar o nome / permuta…', acao: (el, f) => { f(); dlgSubst(id, data); return false; } }] : []),
         { rotulo: 'Salvar', classe: 'btn-primary', acao: async el => {
@@ -288,6 +291,92 @@
     });
   }
 
+  /* ---------- férias / ausência em lote ---------- */
+  const MAX_LOTE = 186;
+  const diasEntre = (ini, fim) => {
+    const L = [];
+    for (let t = Date.parse(ini + 'T12:00:00Z'), f = Date.parse(fim + 'T12:00:00Z'); t <= f && L.length <= MAX_LOTE; t += 864e5) L.push(new Date(t).toISOString().slice(0, 10));
+    return L;
+  };
+  const dm = d => d.slice(8) + '/' + d.slice(5, 7);
+  function dlgLote(id, data) {
+    const pess = S.cols.filter(c => c.id === id || (c.setor === S.setor && c.ativo && !c.vaga)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const cods = Object.values(S.cods).sort((a, b) => (b.codigo === 'FER') - (a.codigo === 'FER') || !!a.presenca - !!b.presenca);
+    const ini = data || iso(S.ano, S.mes, 1), fim = iso(+ini.slice(0, 4), +ini.slice(5, 7), ndias(+ini.slice(0, 4), +ini.slice(5, 7)));
+    let ocupado = false, vez = 0;
+    const m = U.modal({
+      titulo: 'Férias / ausência em lote', largura: 560,
+      corpo: `<label class="fl">Pessoa *</label><select id="l-quem"><option value="">Selecione...</option>${pess.map(c => `<option value="${c.id}"${c.id === id ? ' selected' : ''}>${esc(c.nome)} — ${esc(c.equipe || c.cargo)}</option>`).join('')}</select>
+        <label class="fl">O que marcar *</label><select id="l-cod">${cods.map(k => `<option value="${esc(k.codigo)}">${esc(k.codigo)} — ${esc(k.descricao)}</option>`).join('')}</select>
+        <div class="grade2"><div><label class="fl">De *</label><input type="date" id="l-ini" value="${ini}"></div><div><label class="fl">Até *</label><input type="date" id="l-fim" value="${fim}"></div></div>
+        <label class="fl">Em quais dias *</label><select id="l-quais"><option value="plantao">Só nos dias de plantão já lançados</option><option value="impar">Dias ímpares</option><option value="par">Dias pares</option><option value="todos">Todos os dias do período</option></select>
+        <div id="l-previa" class="ajuda" style="background:#F3F4F6;padding:8px 10px;border-radius:6px;margin:8px 0"></div>
+        <label class="fl">Motivo *</label><textarea id="l-mot" rows="2" maxlength="300" placeholder="Ex.: férias programadas"></textarea>`,
+      botoes: [{ rotulo: 'Cancelar' }, { rotulo: 'Apagar do período', acao: () => executar(true) }, { rotulo: 'Marcar', classe: 'btn-primary', acao: () => executar(false) }],
+    });
+    const q = x => m.el.querySelector(x), previa = q('#l-previa');
+    const escolha = () => ({ quem: +q('#l-quem').value, cod: q('#l-cod').value, ini: q('#l-ini').value, fim: q('#l-fim').value, quais: q('#l-quais').value });
+    const erroEscolha = v => !v.quem ? 'Escolha a pessoa.' : !v.ini || !v.fim ? 'Informe as duas datas.' : v.fim < v.ini ? 'A data final está antes da inicial.' : diasEntre(v.ini, v.fim).length > MAX_LOTE ? 'O período máximo é de 6 meses.' : '';
+    /* lê o banco na hora e separa o que precisa mudar */
+    async function planejar(v, apagar) {
+      const L = await pagina(() => window.sb.from('esc_lancamentos').select('*').eq('colaborador_id', v.quem).gte('data', v.ini).lte('data', v.fim).order('id'));
+      const porDia = new Map(L.map(l => [l.data, l]));
+      const marcados = diasEntre(v.ini, v.fim).map(d => ({ d, l: porDia.get(d) })).filter(({ d, l }) => {
+        if (apagar) return !!l && l.codigo === v.cod;
+        if (v.quais === 'todos') return true;
+        if (v.quais === 'plantao') return presenca(l) || (!!l && l.codigo === v.cod);
+        return +d.slice(8) % 2 === (v.quais === 'impar' ? 1 : 0);
+      });
+      const comLanc = new Set(L.map(l => l.data.slice(0, 7)));
+      const vazios = [...new Set(diasEntre(v.ini, v.fim).map(d => d.slice(0, 7)))].filter(x => !comLanc.has(x)).map(x => x.slice(5) + '/' + x.slice(0, 4));
+      return { fazer: apagar ? marcados : marcados.filter(x => !x.l || x.l.codigo !== v.cod), ja: apagar ? 0 : marcados.filter(x => x.l && x.l.codigo === v.cod).length, vazios };
+    }
+    async function mostra() {
+      const v = escolha(), minha = ++vez, erro = erroEscolha(v);
+      if (erro) { previa.textContent = erro; return; }
+      previa.textContent = 'Conferindo...';
+      try {
+        const { fazer, ja, vazios } = await planejar(v, false);
+        if (minha !== vez || ocupado) return;
+        const outros = fazer.filter(x => x.l && !presenca(x.l)), cobrindo = fazer.filter(x => x.l && x.l.cobre_id);
+        previa.innerHTML = (fazer.length ? `<b>${fazer.length} dia(s)</b> serão marcados com <b>${esc(v.cod)}</b>: ${fazer.map(x => dm(x.d)).join(', ')}.` : '<b>Nenhum dia para marcar.</b>')
+          + (ja ? `<br>${ja} dia(s) já estão com ${esc(v.cod)}.` : '')
+          + (outros.length ? `<br><b style="color:#B45309">Vão ser trocados:</b> ${outros.map(x => `${dm(x.d)} (${esc(x.l.codigo)})`).join(', ')}.` : '')
+          + (cobrindo.length ? `<br><b style="color:#B91C1C">Atenção:</b> nestes dias a pessoa está cobrindo alguém e a cobertura será desfeita: ${cobrindo.map(x => `${dm(x.d)} (${esc((colab(x.l.cobre_id) || {}).nome || '')})`).join(', ')}.` : '')
+          + (v.quais === 'plantao' && vazios.length ? `<br><b style="color:#B91C1C">Atenção:</b> não há plantão lançado em ${vazios.join(', ')}; esses dias ficam de fora. Para incluí-los, escolha Dias ímpares, Dias pares ou Todos os dias.` : '');
+      } catch (e) { if (minha === vez) previa.textContent = e.message; }
+    }
+    async function executar(apagar) {
+      if (ocupado) return false;
+      const v = escolha(), mot = q('#l-mot').value.trim(), erro = erroEscolha(v);
+      if (erro) { U.toast(erro, 'erro'); return false; }
+      if (mot.length < 5) { U.toast('Escreva o motivo (mínimo 5 letras).', 'erro'); return false; }
+      ocupado = true; vez++;
+      let feitos = 0, total = 0, atual = '';
+      try {
+        const { fazer } = await planejar(v, apagar); total = fazer.length;
+        if (!total) { U.toast(apagar ? `Não há ${v.cod} nesse período.` : 'Nenhum dia para marcar.', 'erro'); return false; }
+        if (apagar && !await U.confirmar(`Apagar ${v.cod} de ${total} dia(s)? Esses dias ficam em branco.`, 'Apagar', true)) return false;
+        for (const { d, l } of fazer) {
+          atual = d; previa.textContent = `Salvando ${feitos + 1} de ${total}... não feche a tela.`;
+          await U.db(window.sb.rpc('esc_corrigir', { p_data: d, p_colab: v.quem, p_codigo: apagar ? '' : v.cod, p_motivo: mot, p_area: (l && l.area) || '', p_obs: l && !l.cobre_id ? l.observacao || '' : '', p_origem: 'escala' }));
+          feitos++;
+        }
+      } catch (e) {
+        previa.textContent = `Parou${atual ? ' no dia ' + dm(atual) : ''}: ${e.message} ${feitos} de ${total} dia(s) foram salvos. Toque de novo para continuar.`;
+        U.toast('Não foi possível terminar.', 'erro');
+        if (feitos) await S.redesenharTudo();
+        return false;
+      } finally { ocupado = false; }
+      U.toast(`${feitos} dia(s) ${apagar ? 'apagado(s)' : 'marcado(s) com ' + v.cod}.`);
+      S.ano = +v.ini.slice(0, 4); S.mes = +v.ini.slice(5, 7);
+      await S.redesenharTudo();
+    }
+    q('#l-ini').addEventListener('change', () => { if (q('#l-fim').value < q('#l-ini').value) q('#l-fim').value = q('#l-ini').value; });
+    ['#l-quem', '#l-cod', '#l-ini', '#l-fim', '#l-quais'].forEach(x => q(x).addEventListener('change', mostra));
+    mostra();
+  }
+
   /* ---------- cobrir com RPA / Extra ---------- */
   function turnoHabitual(c, l) {
     if (presenca(l)) return l.codigo;
@@ -299,7 +388,7 @@
     const t = /\bSN\b/i.test(c.equipe || '') ? 'SN' : 'SD';
     return S.cods[t] ? t : '';
   }
-  function dlgCobrir(ausId, data, subId) {
+  function dlgCobrir(ausId, data, subId, sel) {
     const a = colab(ausId), la = lanDe(ausId, data), dias = ndias(S.ano, S.mes), tocado = +data.slice(8);
     const ordem = (x, y) => (y.cargo === a.cargo) - (x.cargo === a.cargo) || x.nome.localeCompare(y.nome, 'pt-BR');
     const disp = S.cols.filter(x => x.id !== a.id && x.ativo && !x.vaga && x.setor === a.setor);
@@ -310,7 +399,7 @@
     const motivoAus = la && !presenca(la) ? la.codigo : '';
     const grade = [...Array(dias)].map((_, i) => {
       const d = i + 1, l = lanDe(a.id, iso(S.ano, S.mes, d));
-      return `<label>${d} ${DOW[dow(S.ano, S.mes, d)]}<br><input type="checkbox" value="${d}"${d === tocado ? ' checked' : ''}><small>${esc(l ? l.codigo : '')}</small></label>`;
+      return `<label>${d} ${DOW[dow(S.ano, S.mes, d)]}<br><input type="checkbox" value="${d}"${(sel ? sel.includes(d) : d === tocado) ? ' checked' : ''}><small>${esc(l ? l.codigo : '')}</small></label>`;
     }).join('');
     const m = U.modal({
       titulo: `Cobrir ${a.nome}`, largura: 560,
@@ -351,7 +440,7 @@
     });
     const tipoPadrao = () => { const x = colab(+el.querySelector('#c-sub').value); if (x) el.querySelector('#c-tipo').value = x.vinculo === 'RPA' ? 'rpa' : 'extra'; };
     el.querySelector('#c-sub').onchange = tipoPadrao; tipoPadrao(); atualiza();
-    el.querySelector('#c-novo').onclick = () => { m.fechar(); formRPA(null, { setor: a.setor, cargo: a.cargo }, id => dlgCobrir(ausId, data, id)); };
+    el.querySelector('#c-novo').onclick = () => { const atuais = marcados(); m.fechar(); formRPA(null, { setor: a.setor, cargo: a.cargo }, id => dlgCobrir(ausId, data, id, atuais)); };
   }
 
   /* ---------- cadastro de RPA / Extra ---------- */
@@ -398,11 +487,12 @@
       { t: '', f: c => c.vinculo === 'CLT' ? '' : `<button class="btn btn-ghost" data-ed="${c.id}" title="Editar"><i class="fas fa-pen"></i></button> <button class="btn btn-ghost" data-avulso="${c.id}" title="Lançar plantão sem substituir ninguém"><i class="fas fa-calendar-plus"></i></button>` },
     ];
     corpo.innerHTML = `<div class="barra"><select id="rp-set"><option value="">Todos os setores</option>${SETORES.map(x => `<option value="${x[0]}"${x[0] === setor ? ' selected' : ''}>${x[1]}</option>`).join('')}</select><span class="espaco"></span>
-      <button class="btn btn-primary" id="rp-novo"><i class="fas fa-user-plus"></i> Cadastrar RPA / Extra</button></div>
+      <button class="btn btn-ghost" id="rp-fech"><i class="fas fa-file-invoice"></i> Fechamento de ${MESES[S.mes - 1]}</button><button class="btn btn-primary" id="rp-novo"><i class="fas fa-user-plus"></i> Cadastrar RPA / Extra</button></div>
       ${U.tabela(colunas, L, 'Nenhum RPA ou Extra cadastrado.')}
       <div class="ajuda">Totais de ${MESES[S.mes - 1]} e do ano de ${S.ano}. ${gestor ? 'Documentos: visíveis somente para gestores. O número mostra os itens obrigatórios já entregues.' : 'Os documentos são vistos somente pelos gestores.'}</div>`;
     const dest = () => abaRPA(corpo);
     corpo.querySelector('#rp-set').onchange = e => { corpo.dataset.setor = e.target.value; dest(); };
+    corpo.querySelector('#rp-fech').onclick = async () => { try { await carregarMes(); dlgFechamento(setor); } catch (e) { U.erro(e); } };
     corpo.querySelector('#rp-novo').onclick = () => formRPA(null, { setor: setor || S.setor }, dest);
     corpo.querySelectorAll('[data-ed]').forEach(b => b.onclick = () => formRPA(colab(+b.dataset.ed), null, dest));
     corpo.querySelectorAll('[data-docs]').forEach(b => b.onclick = () => dlgDocs(colab(+b.dataset.docs), dest));
@@ -482,6 +572,171 @@
       });
     }
     try { await desenha(); } catch (e) { lista.innerHTML = `<div class="vazio">${esc(e.message)}</div>`; }
+  }
+
+  /* ---------- fechamento mensal de RPA / Extra ---------- */
+  function fechamento(setor) {
+    const det = [];
+    for (const l of S.lan.values()) {
+      const c = colab(l.colaborador_id);
+      if (!c || !SIGLA[l.origem] || !presenca(l) || (setor && c.setor !== setor)) continue;
+      const k = S.cods[l.codigo], aus = l.cobre_id ? colab(l.cobre_id) : null, la = aus ? lanDe(aus.id, l.data) : null;
+      det.push({ c, data: l.data, tipo: SIGLA[l.origem], turno: l.codigo, horas: +k.horas || 0, noturnas: +k.horas_noturnas || 0,
+        cobriu: aus ? aus.nome : (/^Cobre /.test(l.observacao || '') ? l.observacao.slice(6) : ''), motivo: la && !presenca(la) ? la.codigo : '' });
+    }
+    det.sort((a, b) => a.c.nome.localeCompare(b.c.nome, 'pt-BR') || a.data.localeCompare(b.data));
+    const mapa = new Map();
+    det.forEach(x => {
+      const r = mapa.get(x.c.id) || { c: x.c, rpa: 0, extra: 0, horas: 0, noturnas: 0, dias: [] };
+      r[x.tipo === 'RPA' ? 'rpa' : 'extra']++; r.horas += x.horas; r.noturnas += x.noturnas; r.dias.push(x.data.slice(8));
+      mapa.set(x.c.id, r);
+    });
+    return { det, res: [...mapa.values()] };
+  }
+  function dlgFechamento(setor) {
+    const { det, res } = fechamento(setor), soma = k => res.reduce((t, r) => t + r[k], 0);
+    const titulo = `${MESES[S.mes - 1]} de ${S.ano}${setor ? ' · ' + SETOR_NOME[setor] : ''}`, arq = `fechamento_rpa_${S.ano}-${p2(S.mes)}${setor ? '_' + setor : ''}`;
+    const cabR = ['Nome', 'Matrícula', 'Vínculo', 'Cargo', 'Setor', 'Plantões RPA', 'Plantões extra', 'Total', 'Horas', 'H. noturnas', 'Dias'];
+    const linR = res.map(r => [r.c.nome, r.c.matricula || '', r.c.vinculo, r.c.cargo, SETOR_NOME[r.c.setor] || r.c.setor, r.rpa, r.extra, r.rpa + r.extra, r.horas, r.noturnas, r.dias.join(', ')]);
+    const cabD = ['Data', 'Nome', 'Matrícula', 'Tipo', 'Turno', 'Horas', 'H. noturnas', 'Cobriu', 'Motivo da ausência', 'Setor'];
+    const linD = det.map(x => [U.fmtData(x.data), x.c.nome, x.c.matricula || '', x.tipo, x.turno, x.horas, x.noturnas, x.cobriu, x.motivo, SETOR_NOME[x.c.setor] || x.c.setor]);
+    const tab = (cab, lin) => `<table style="font-size:10px;width:100%"><thead><tr>${cab.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${lin.map(l => `<tr>${l.map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    const total = `Total: ${soma('rpa')} plantões RPA · ${soma('extra')} extras · ${soma('horas')} h · ${soma('noturnas')} h noturnas`;
+    const sem = () => { if (res.length) return false; U.toast('Não há plantão de RPA ou extra neste mês.', 'erro'); return true; };
+    U.modal({
+      titulo: `Fechamento RPA / Extra · ${titulo}`, largura: 900,
+      corpo: `${U.tabela([{ t: 'Nome', f: r => `<b>${esc(r.c.nome)}</b><br><small>${esc(r.c.vinculo)} · ${esc(r.c.cargo)}${r.c.matricula ? ' · mat. ' + esc(r.c.matricula) : ''}</small>` }, { t: 'RPA', f: r => r.rpa || '' }, { t: 'Extra', f: r => r.extra || '' },
+        { t: 'Total', f: r => `<b>${r.rpa + r.extra}</b>` }, { t: 'Horas', f: r => r.horas }, { t: 'H. noturnas', f: r => r.noturnas }, { t: 'Dias', f: r => `<small>${r.dias.join(', ')}</small>` }], res, 'Nenhum plantão de RPA ou extra neste mês.')}
+        <div class="ajuda">${total}. Conta os plantões lançados na escala do mês, inclusive os que ainda vão acontecer. Confira antes de enviar.</div>`,
+      botoes: [{ rotulo: 'Fechar' },
+        { rotulo: 'Baixar resumo', acao: () => { if (!sem()) U.baixarCsv(arq + '_resumo.csv', cabR, linR); return false; } },
+        { rotulo: 'Baixar dia a dia', acao: () => { if (!sem()) U.baixarCsv(arq + '_dias.csv', cabD, linD); return false; } },
+        { rotulo: 'Imprimir', classe: 'btn-primary', acao: () => { if (!sem()) U.imprimir(U.cabecalho('Fechamento mensal de RPA / Extra', titulo) + tab(cabR, linR) + `<p style="font-size:10px">${total}</p><h4 style="margin-top:12px">Dia a dia</h4>` + tab(cabD, linD) + U.rodape(U.ctx.nome), arq, { paisagem: true, margem: '10mm' }); return false; } }],
+    });
+  }
+
+  /* ---------- aba: férias do ano ---------- */
+  const somaDias = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+  const corridos = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5) + 1;
+  async function abaFerias(corpo) {
+    const ano = +(corpo.dataset.ano || S.ano), setor = corpo.dataset.setor === undefined ? S.setor : corpo.dataset.setor;
+    const todas = await pagina(() => window.sb.from('esc_programacao').select('*').lte('inicio', `${ano}-12-31`).gte('fim', `${ano}-01-01`).order('inicio').order('id'));
+    const L = todas.filter(x => { const c = colab(x.colaborador_id); return !x.cancelado_em && c && (!setor || c.setor === setor); });
+    const pessoas = [...new Set(L.map(x => x.colaborador_id))].map(colab).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const noMes = (x, m) => x.inicio <= iso(ano, m, ndias(ano, m)) && x.fim >= iso(ano, m, 1);
+    const celula = (c, m) => {
+      const partes = L.filter(x => x.colaborador_id === c.id && noMes(x, m));
+      if (!partes.length) return '<td></td>';
+      return `<td style="background:${cor(partes[0].codigo)};font-size:10px" title="${esc(partes[0].codigo)}">${partes.map(x => `${x.inicio < iso(ano, m, 1) ? 1 : +x.inicio.slice(8)}–${x.fim > iso(ano, m, ndias(ano, m)) ? ndias(ano, m) : +x.fim.slice(8)}`).join('<br>')}</td>`;
+    };
+    const meses = [...Array(12)].map((_, i) => i + 1);
+    corpo.innerHTML = `<div class="barra"><button class="btn btn-ghost" id="fe-ant"><i class="fas fa-chevron-left"></i> ${ano - 1}</button><b>${ano}</b><button class="btn btn-ghost" id="fe-prox">${ano + 1} <i class="fas fa-chevron-right"></i></button>
+      <select id="fe-set"><option value="">Todos os setores</option>${SETORES.map(x => `<option value="${x[0]}"${x[0] === setor ? ' selected' : ''}>${x[1]}</option>`).join('')}</select><span class="espaco"></span>
+      ${S.editor ? '<button class="btn btn-primary" id="fe-nova"><i class="fas fa-plus"></i> Programar férias</button>' : ''}</div>
+      ${pessoas.length ? `<div class="esc-wrap"><table class="esc-tab" id="fe-mapa"><thead><tr><th>Colaborador</th>${meses.map(m => `<th>${MESES[m - 1].slice(0, 3)}</th>`).join('')}</tr></thead><tbody>
+        ${pessoas.map(c => `<tr><td class="esc-nome">${esc(c.nome)}<small>${esc(c.cargo)}</small></td>${meses.map(m => celula(c, m)).join('')}</tr>`).join('')}
+        <tr class="esc-cob"><td class="esc-nome">Pessoas fora no mês</td>${meses.map(m => `<td><b>${new Set(L.filter(x => noMes(x, m)).map(x => x.colaborador_id)).size || ''}</b></td>`).join('')}</tr></tbody></table></div>` : ''}
+      <h3 style="margin-top:14px">Programações de ${ano}</h3>
+      ${U.tabela([{ t: 'Nome', f: x => esc(colab(x.colaborador_id).nome) }, { t: 'Tipo', f: x => esc(x.codigo) }, { t: 'Período', f: x => `${U.fmtData(x.inicio)} a ${U.fmtData(x.fim)}<br><small>${corridos(x.inicio, x.fim)} dias corridos</small>` },
+        { t: 'Observação', f: x => esc(x.observacao || '—') }, { t: 'Cadastrado por', f: x => esc(x.criado_por_nome || '—') },
+        { t: '', f: x => S.editor ? `<button class="btn btn-ghost" data-canc="${x.id}"><i class="fas fa-xmark"></i> Cancelar</button>` : '' }], L, 'Nenhuma programação neste ano.')}
+      <div class="ajuda">Cadastre o período uma vez: os plantões já lançados mudam na hora e os próximos meses já nascem preenchidos quando forem gerados. Cancelar devolve os plantões.</div>`;
+    const dest = () => abaFerias(corpo);
+    corpo.querySelector('#fe-ant').onclick = () => { corpo.dataset.ano = ano - 1; dest(); };
+    corpo.querySelector('#fe-prox').onclick = () => { corpo.dataset.ano = ano + 1; dest(); };
+    corpo.querySelector('#fe-set').onchange = e => { corpo.dataset.setor = e.target.value; dest(); };
+    if (S.editor) corpo.querySelector('#fe-nova').onclick = () => dlgProgramar(setor, async inicio => { corpo.dataset.ano = inicio.slice(0, 4); await carregarMes(); await dest(); });
+    corpo.querySelectorAll('[data-canc]').forEach(b => b.onclick = async () => {
+      const x = L.find(y => y.id === +b.dataset.canc);
+      const mot = await U.pedirMotivo('Cancelar programação', `${colab(x.colaborador_id).nome}: ${U.fmtData(x.inicio)} a ${U.fmtData(x.fim)}. Os plantões que estavam no lugar voltam.`);
+      if (!mot) return;
+      try { const n = await U.db(window.sb.rpc('esc_cancelar_programacao', { p_id: x.id, p_motivo: mot })); U.toast(`Programação cancelada. ${n} plantão(ões) devolvido(s).`); await carregarMes(); await dest(); } catch (e) { U.erro(e); }
+    });
+  }
+  function dlgProgramar(setor, depois) {
+    const pess = S.cols.filter(c => c.ativo && !c.vaga && c.vinculo === 'CLT' && (!setor || c.setor === setor)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const cods = Object.values(S.cods).filter(k => !k.presenca).sort((a, b) => (b.codigo === 'FER') - (a.codigo === 'FER'));
+    const m = U.modal({
+      titulo: 'Programar férias', largura: 520,
+      corpo: `<label class="fl">Pessoa *</label><select id="g-quem"><option value="">Selecione...</option>${pess.map(c => `<option value="${c.id}">${esc(c.nome)} — ${esc(c.cargo)}${setor ? '' : ' · ' + esc(SETOR_NOME[c.setor] || c.setor)}</option>`).join('')}</select>
+        <label class="fl">Tipo *</label><select id="g-cod">${cods.map(k => `<option value="${esc(k.codigo)}">${esc(k.codigo)} — ${esc(k.descricao)}</option>`).join('')}</select>
+        <div class="grade2"><div><label class="fl">Primeiro dia *</label><input type="date" id="g-ini"></div><div><label class="fl">Último dia *</label><input type="date" id="g-fim"></div></div>
+        <div class="ajuda" id="g-conta"></div>
+        <label class="fl">Observação</label><textarea id="g-obs" rows="2" maxlength="300" placeholder="Ex.: período aquisitivo 2025/2026"></textarea>`,
+      botoes: [{ rotulo: 'Cancelar' }, { rotulo: 'Salvar programação', classe: 'btn-primary', acao: async el => {
+        const q = x => el.querySelector(x), quem = +q('#g-quem').value, ini = q('#g-ini').value, fim = q('#g-fim').value;
+        if (!quem) { U.toast('Escolha a pessoa.', 'erro'); return false; }
+        if (!ini || !fim || fim < ini) { U.toast('Confira as datas.', 'erro'); return false; }
+        const r = await U.db(window.sb.rpc('esc_programar', { p_colab: quem, p_codigo: q('#g-cod').value, p_inicio: ini, p_fim: fim, p_obs: q('#g-obs').value }));
+        U.toast(`Programação salva. ${r.aplicados} plantão(ões) já lançado(s) foram marcados.`);
+        await depois(ini);
+        if (r.conflitos && r.conflitos.length) U.modal({ titulo: 'Atenção: confira estes dias', largura: 460,
+          corpo: `<p>${esc(colab(quem).nome)} tem troca, cobertura ou extra dentro do período. Estes dias <b>não foram mudados</b>:</p><ul style="margin:8px 0 0 18px">${r.conflitos.map(x => `<li>${U.fmtData(x.data)}: ${esc(x.codigo)} (${esc(ORIGEM_NOME[x.origem] || x.origem)})</li>`).join('')}</ul>`, botoes: [{ rotulo: 'Entendi', classe: 'btn-primary' }] });
+      } }],
+    });
+    const el = m.el, ini = el.querySelector('#g-ini'), fim = el.querySelector('#g-fim');
+    const conta = () => { el.querySelector('#g-conta').textContent = ini.value && fim.value && fim.value >= ini.value ? `${corridos(ini.value, fim.value)} dias corridos.` : ''; };
+    /* ao escolher o primeiro dia, sugere 30 dias */
+    ini.addEventListener('change', () => { if (ini.value && (!fim.value || fim.value < ini.value)) fim.value = somaDias(ini.value, 29); conta(); });
+    fim.addEventListener('change', conta);
+  }
+
+  /* ---------- aba: pendências ---------- */
+  const AUSENCIAS = ['FER', 'AFT', 'AT', 'LIC', 'FT'];
+  function diaDaEscala(c, data) {
+    const d = +data.slice(8), wd = dow(+data.slice(0, 4), +data.slice(5, 7), d);
+    if (c.gerar === 'par') return d % 2 === 0;
+    if (c.gerar === 'impar') return d % 2 === 1;
+    if (c.gerar === 'uteis') return wd > 0 && wd < 6;
+    if (c.gerar === 'ciclo' && c.ancora && c.ciclo_dias) return (((corridos(c.ancora, data) - 1) % c.ciclo_dias) + c.ciclo_dias) % c.ciclo_dias === 0;
+    return true;
+  }
+  function semSubstituto(setor, desde) {
+    const porDia = {};
+    for (const l of S.lan.values()) if (presenca(l)) (porDia[l.data] = porDia[l.data] || []).push(l);
+    const coberto = (c, l) => (porDia[l.data] || []).some(x => x.cobre_id === c.id || (/^Substituído por /.test(l.observacao || '') && x.observacao === 'Cobre ' + c.nome));
+    const out = [];
+    S.cols.filter(c => c.ativo && !c.vaga && (!setor || c.setor === setor)).forEach(c => {
+      const aus = [...S.lan.values()].filter(l => l.colaborador_id === c.id && AUSENCIAS.includes(l.codigo) && !l.cobre_id).sort((a, b) => a.data.localeCompare(b.data));
+      /* quando a ausência foi marcada em dias seguidos, só contam os dias em que a pessoa estaria de plantão */
+      const seguidos = aus.some((l, i) => i && corridos(aus[i - 1].data, l.data) === 2);
+      const falta = aus.filter(l => (!desde || l.data >= desde) && (!seguidos || diaDaEscala(c, l.data)) && !coberto(c, l));
+      if (falta.length) out.push({ c, dias: falta.map(l => +l.data.slice(8)), cods: [...new Set(falta.map(l => l.codigo))], primeira: falta[0].data });
+    });
+    return out.sort((a, b) => a.primeira.localeCompare(b.primeira) || a.c.nome.localeCompare(b.c.nome, 'pt-BR'));
+  }
+  async function abaPend(corpo) {
+    const hoje = U.hojeISO(), setor = corpo.dataset.setor || '';
+    const so = corpo.dataset.so === undefined ? hoje.slice(0, 7) === `${S.ano}-${p2(S.mes)}` : corpo.dataset.so === '1';
+    await carregarMes();
+    const aus = semSubstituto(setor, so ? hoje : '');
+    const baixo = regrasDe(setor).map(r => ({ r, dias: [...Array(ndias(S.ano, S.mes))].map((_, i) => i + 1).filter(d => { const data = iso(S.ano, S.mes, d); if (so && data < hoje) return false; const n = contar(r, data); return n !== null && n < r.minimo; }) })).filter(x => x.dias.length);
+    let docsFalta = [];
+    if (S.config) {
+      const [tipos, docs] = await Promise.all([U.db(window.sb.from('esc_rpa_tipos').select('*').order('ordem').order('nome')), pagina(() => window.sb.from('esc_rpa_documentos').select('id,colaborador_id,tipo_id').order('id'))]);
+      const obrig = tipos.filter(t => t.ativo && t.obrigatorio);
+      docsFalta = S.cols.filter(c => c.ativo && !c.vaga && c.vinculo !== 'CLT' && (!setor || c.setor === setor))
+        .map(c => ({ c, falta: obrig.filter(t => !docs.some(d => d.colaborador_id === c.id && d.tipo_id === t.id)) })).filter(x => x.falta.length);
+    }
+    const nAus = aus.reduce((t, x) => t + x.dias.length, 0), nBaixo = baixo.reduce((t, x) => t + x.dias.length, 0);
+    const selo = (n, txt) => `<span class="tag ${n ? 'vermelho' : 'verde'}">${n} ${txt}</span>`;
+    corpo.innerHTML = `<div class="barra"><select id="pe-set"><option value="">Todos os setores</option>${SETORES.map(x => `<option value="${x[0]}"${x[0] === setor ? ' selected' : ''}>${x[1]}</option>`).join('')}</select>
+      <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="pe-so" ${so ? 'checked' : ''}> Só de hoje em diante</label></div>
+      <div class="barra">${selo(nAus, 'dia(s) sem substituto')} ${selo(nBaixo, 'alerta(s) abaixo do mínimo')} ${S.config ? selo(docsFalta.length, 'RPA/Extra com documento faltando') : ''}</div>
+      <h3>Ausências sem substituto em ${MESES[S.mes - 1]}</h3>
+      ${U.tabela([{ t: 'Nome', f: x => `<b>${esc(x.c.nome)}</b><br><small>${esc(x.c.cargo)} · ${esc(SETOR_NOME[x.c.setor] || x.c.setor)}</small>` }, { t: 'Ausência', f: x => esc(x.cods.join(', ')) }, { t: 'Dias', f: x => x.dias.map(p2).join(', ') }, { t: 'Total', f: x => `<b>${x.dias.length}</b>` },
+        { t: '', f: x => S.editor ? `<button class="btn btn-primary" data-cobrir="${x.c.id}"><i class="fas fa-user-plus"></i> Cobrir</button>` : '' }], aus, 'Nenhuma ausência sem substituto.')}
+      <h3 style="margin-top:18px">Dias abaixo do mínimo</h3>
+      ${U.tabela([{ t: 'Posto', f: x => `${esc(x.r.rotulo || x.r.cargo)}<br><small>${esc(SETOR_NOME[x.r.setor] || x.r.setor)} · mínimo ${x.r.minimo}</small>` }, { t: 'Dias', f: x => x.dias.map(p2).join(', ') }, { t: 'Total', f: x => `<b>${x.dias.length}</b>` }], baixo, 'Nenhum dia abaixo do mínimo.')}
+      ${S.config ? `<h3 style="margin-top:18px">Documentos de RPA / Extra faltando</h3>
+      ${U.tabela([{ t: 'Nome', f: x => `<b>${esc(x.c.nome)}</b> <span class="tag azul">${esc(x.c.vinculo)}</span>` }, { t: 'Falta entregar', f: x => `<small>${x.falta.map(t => esc(t.nome)).join('; ')}</small>` }, { t: 'Total', f: x => `<b>${x.falta.length}</b>` },
+        { t: '', f: x => `<button class="btn btn-ghost" data-docs="${x.c.id}"><i class="fas fa-folder-open"></i> Documentos</button>` }], docsFalta, 'Nenhum documento obrigatório faltando.')}` : ''}
+      <div class="ajuda">Dias com ausência em quem não precisa de substituto também aparecem aqui; a decisão de cobrir é sua.</div>`;
+    const dest = () => abaPend(corpo);
+    corpo.querySelector('#pe-set').onchange = e => { corpo.dataset.setor = e.target.value; dest(); };
+    corpo.querySelector('#pe-so').onchange = e => { corpo.dataset.so = e.target.checked ? '1' : '0'; dest(); };
+    corpo.querySelectorAll('[data-cobrir]').forEach(b => b.onclick = () => { const x = aus.find(y => y.c.id === +b.dataset.cobrir); dlgCobrir(x.c.id, x.primeira, undefined, x.dias); });
+    corpo.querySelectorAll('[data-docs]').forEach(b => b.onclick = () => dlgDocs(colab(+b.dataset.docs), dest));
   }
 
   /* ---------- aba: minha escala ---------- */
