@@ -1,9 +1,13 @@
-/* RH — todos solicitam (troca de plantão, extra, RPA, justificativa de ponto, atestado);
-   gestores autorizam. Ninguém autoriza a própria solicitação (o banco impede). */
+/* RH — todos solicitam (troca de plantão, extra, RPA, justificativa de ponto, atestado, falta, banco de horas);
+   gestores autorizam. Quem participa do pedido não autoriza (o banco impede).
+   Pedido autorizado de troca, extra, atestado, falta ou banco de horas entra sozinho na escala. */
 (function () {
   'use strict';
   const U = window.UPA, esc = U.esc;
-  const TIPOS = { troca: 'Troca de plantão', extra: 'Plantão extra', rpa: 'RPA', ponto: 'Justificativa de ponto', atestado: 'Atestado médico' };
+  const TIPOS = { troca: 'Troca de plantão', extra: 'Plantão extra', rpa: 'RPA', ponto: 'Justificativa de ponto', atestado: 'Atestado médico', falta: 'Falta', bh: 'Banco de horas (folga)' };
+  const NA_ESCALA = ['troca', 'extra', 'atestado', 'falta', 'bh'];
+  const mesma = m => String(m || '').trim() !== '' && String(m).trim() === String(U.ctx.matricula || '').trim();
+  const participa = r => r.criado_por === U.ctx.id || (r.tipo === 'troca' && mesma(r.segundo_matricula)) || (r.tipo === 'falta' && mesma((r.dados || {}).matriculaFalta));
   const ST = { aguardando_colega: ['Aguardando colega', 'amarelo'], pendente: ['Aguardando autorização', 'azul'], autorizada: ['Autorizada', 'verde'], recusada: ['Recusada', 'vermelho'], cancelada: ['Cancelada', ''] };
   const TURNO_R = ['Dia (07h–19h)', 'Noite (19h–07h)'];
   const CAMPOS_TIPO = {
@@ -16,6 +20,8 @@
     rpa: [{ n: 'servico', rotulo: 'Serviço prestado', obrig: true, max: 200 }, { n: 'periodo', rotulo: 'Período', obrig: true, max: 80, ph: 'Ex.: 01/10 a 15/10' }, { n: 'valor', rotulo: 'Valor (R$)', tipo: 'number', obrig: true, min: 0, step: '0.01' }, { n: 'banco', rotulo: 'Banco', max: 60 }, { n: 'conta', rotulo: 'Agência / conta', max: 60 }],
     ponto: [{ n: 'data', rotulo: 'Data', tipo: 'date', obrig: true }, { n: 'turno', rotulo: 'Turno', tipo: 'select', opcoes: TURNO_R, obrig: true }, { n: 'texto', rotulo: 'Justificativa', tipo: 'textarea', obrig: true, max: 500, col: '1 / -1' }],
     atestado: [{ n: 'data', rotulo: 'Início do afastamento', tipo: 'date', obrig: true }, { n: 'dias', rotulo: 'Dias de afastamento', tipo: 'number', obrig: true, min: 1, step: '1' }, { n: 'retorno', rotulo: 'Retorno previsto', tipo: 'date' }, { n: 'cid', rotulo: 'CID', max: 20 }, { n: 'medico', rotulo: 'Médico / CRM', max: 120 }, { n: 'obs', rotulo: 'Observações', tipo: 'textarea', max: 300, col: '1 / -1' }],
+    falta: [{ n: 'matriculaFalta', rotulo: 'Matrícula de quem faltou', obrig: true, max: 20 }, { n: 'nomeFalta', rotulo: 'Nome de quem faltou', obrig: true, max: 120 }, { n: 'data', rotulo: 'Dia da falta', tipo: 'date', obrig: true }, { n: 'turno', rotulo: 'Turno', tipo: 'select', opcoes: TURNO_R, obrig: true }, { n: 'texto', rotulo: 'Motivo / justificativa', tipo: 'textarea', obrig: true, max: 400, col: '1 / -1' }],
+    bh: [{ n: 'data', rotulo: 'Dia da folga', tipo: 'date', obrig: true }, { n: 'turno', rotulo: 'Turno', tipo: 'select', opcoes: TURNO_R, obrig: true }, { n: 'texto', rotulo: 'Observação', tipo: 'textarea', max: 400, col: '1 / -1' }],
   };
   const abs = p => new URL(p, location.href).href;
 
@@ -28,6 +34,8 @@
       case 'rpa': return L('Serviço prestado', d.servico) + L('Período', d.periodo) + L('Valor', 'R$ ' + Number(d.valor || 0).toFixed(2).replace('.', ',')) + (d.banco ? L('Banco / conta', `${d.banco} / ${d.conta || ''}`) : '');
       case 'ponto': return L('Data', D(d.data)) + L('Turno', d.turno) + L('Justificativa', d.texto);
       case 'atestado': return L('Início do afastamento', D(d.data)) + L('Dias de afastamento', d.dias) + L('Retorno previsto', d.retorno ? D(d.retorno) : '') + L('CID', d.cid) + L('Médico / CRM', d.medico) + (d.obs ? L('Observações', d.obs) : '') + L('Anexo', r.anexo_path ? 'anexado' : 'não anexado');
+      case 'falta': return L('Quem faltou', `${d.nomeFalta} — ${d.matriculaFalta}`) + L('Dia da falta', D(d.data)) + L('Turno', d.turno) + L('Motivo', d.texto);
+      case 'bh': return L('Dia da folga', D(d.data)) + L('Turno', d.turno) + (d.texto ? L('Observação', d.texto) : '');
       default: return '';
     }
   }
@@ -76,12 +84,15 @@
     el.querySelector('#rh-tipo').onchange = e => {
       tipo = e.target.value; const box = el.querySelector('#rh-campos');
       if (!tipo) { box.innerHTML = ''; return; }
-      box.innerHTML = U.camposHtml(CAMPOS_TIPO[tipo], null, 2) +
+      box.innerHTML = U.camposHtml(CAMPOS_TIPO[tipo], tipo === 'falta' ? { matriculaFalta: U.ctx.matricula, nomeFalta: U.ctx.nome } : null, 2) +
+        (NA_ESCALA.includes(tipo) ? '<div class="ajuda">Depois de autorizado, o pedido entra sozinho na escala.</div>' : '') +
         (tipo === 'atestado' ? '<label class="fl">Foto ou PDF do atestado (até 5 MB)</label><input type="file" id="rh-anexo" accept="image/*,.pdf">' : '') +
         `<label class="fl">Sua assinatura *</label><canvas id="rh-as" width="400" height="140" style="width:100%;max-width:420px;border:1.5px dashed var(--gray-300);border-radius:8px;background:#fff"></canvas><div class="barra" style="margin-top:6px"><button type="button" class="btn btn-ghost btn-sm" id="rh-lim">Limpar assinatura</button></div>
          <div class="barra"><button class="btn btn-primary" id="rh-env"><i class="fas fa-paper-plane"></i> Enviar solicitação</button></div>
          ${tipo === 'troca' ? '<div class="ajuda">A troca só segue para o gestor depois que o colega indicado assinar (aba "Para eu assinar" no RH dele).</div>' : ''}`;
       pad = U.assinatura(box.querySelector('#rh-as'));
+      /* só gestor registra falta de outra pessoa */
+      if (tipo === 'falta' && !U.can('rh', 'editar')) ['#f_matriculaFalta', '#f_nomeFalta'].forEach(x => { box.querySelector(x).readOnly = true; });
       box.querySelector('#rh-lim').onclick = () => pad.limpar();
       box.querySelector('#rh-env').onclick = async ev => {
         const v = U.lerCampos(box, CAMPOS_TIPO[tipo]); if (!v) return;
@@ -104,10 +115,23 @@
     };
   }
 
+  function situacaoEscala(r) {
+    if (r.status !== 'autorizada' || !NA_ESCALA.includes(r.tipo)) return '';
+    const caixa = (tag, titulo, msg) => `<div style="margin-top:6px"><span class="tag ${tag}">${titulo}</span>${msg ? `<div class="ajuda">${esc(msg)}</div>` : ''}</div>`;
+    if (r.escala_status === 'lancado') return caixa('verde', 'Lançado na escala', r.escala_msg);
+    if (r.escala_status === 'nao_lancado') return caixa('vermelho', 'Não entrou na escala', r.escala_msg);
+    return caixa('amarelo', 'Ainda não está na escala', '');
+  }
+  function avisoEscala(status, msg) {
+    if (status === 'lancado') U.toast('Autorizada e lançada na escala.');
+    else U.modal({ titulo: 'Autorizada, mas não entrou na escala', largura: 460, corpo: `<p>${esc(msg)}</p><p style="margin-top:8px">Corrija a escala e toque em <b>Lançar na escala</b> no Histórico.</p>`, botoes: [{ rotulo: 'Entendi', classe: 'btn-primary' }] });
+  }
+
   const cartao = (r, botoes) => `<div class="cx"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${esc(TIPOS[r.tipo])}</b> <span class="tag ${ST[r.status][1]}">${ST[r.status][0]}</span><div class="ajuda">${esc(r.criado_por_nome)} · mat. ${esc(r.matricula)} · ${esc(r.profissao)} · enviada ${U.fmtDH(r.criado_em)}</div></div></div>
       <table style="margin-top:8px">${linhasDados(r)}</table>
       ${r.decisao_obs ? `<div class="ajuda">Observação do gestor: ${esc(r.decisao_obs)}</div>` : ''}
       ${r.decidido_por_nome ? `<div class="ajuda">Decisão de ${esc(r.decidido_por_nome)} em ${U.fmtDH(r.decidido_em)}</div>` : ''}
+      ${situacaoEscala(r)}
       <div class="barra" style="margin:8px 0 0">${botoes}</div></div>`;
 
   async function minhas(el) {
@@ -129,11 +153,21 @@
     const l = await U.db(window.sb.from('rh_solicitacoes').select('*').order('criado_em', { ascending: false }).limit(300));
     const pend = l.filter(r => r.status === 'pendente'), resto = l.filter(r => r.status !== 'pendente' && r.status !== 'aguardando_colega');
     el.innerHTML = `<div class="section-title">Aguardando autorização (${pend.length})</div>` +
-      (pend.map(r => cartao(r, r.criado_por === U.ctx.id ? '<span class="ajuda">Você não pode autorizar a própria solicitação.</span>' : `<button class="btn btn-green btn-sm" data-ok="${r.id}"><i class="fas fa-check"></i> Autorizar</button><button class="btn btn-ghost btn-sm" data-no="${r.id}"><i class="fas fa-xmark"></i> Recusar</button>${r.anexo_path ? `<button class="btn btn-ghost btn-sm" data-an="${r.anexo_path}"><i class="fas fa-paperclip"></i> Anexo</button>` : ''}`)).join('') || '<div class="vazio">Nada pendente.</div>') +
-      `<div class="section-title" style="margin-top:18px">Histórico</div>` + (resto.map(r => cartao(r, `<button class="btn btn-ghost btn-sm" data-pr="${r.id}"><i class="fas fa-print"></i> Documento</button>${r.anexo_path ? `<button class="btn btn-ghost btn-sm" data-an="${r.anexo_path}"><i class="fas fa-paperclip"></i> Anexo</button>` : ''}`)).join('') || '<div class="vazio">—</div>');
+      (pend.map(r => cartao(r, r.criado_por === U.ctx.id ? '<span class="ajuda">Você não pode autorizar a própria solicitação.</span>' : participa(r) ? '<span class="ajuda">Você participa deste pedido: outro gestor precisa autorizar.</span>' : `<button class="btn btn-green btn-sm" data-ok="${r.id}"><i class="fas fa-check"></i> Autorizar</button><button class="btn btn-ghost btn-sm" data-no="${r.id}"><i class="fas fa-xmark"></i> Recusar</button>${r.anexo_path ? `<button class="btn btn-ghost btn-sm" data-an="${r.anexo_path}"><i class="fas fa-paperclip"></i> Anexo</button>` : ''}`)).join('') || '<div class="vazio">Nada pendente.</div>') +
+      `<div class="section-title" style="margin-top:18px">Histórico</div>` + (resto.map(r => cartao(r, `${r.status === 'autorizada' && NA_ESCALA.includes(r.tipo) && r.escala_status !== 'lancado' && !participa(r) ? `<button class="btn btn-primary btn-sm" data-lan="${r.id}"><i class="fas fa-calendar-check"></i> Lançar na escala</button>` : ''}<button class="btn btn-ghost btn-sm" data-pr="${r.id}"><i class="fas fa-print"></i> Documento</button>${r.anexo_path ? `<button class="btn btn-ghost btn-sm" data-an="${r.anexo_path}"><i class="fas fa-paperclip"></i> Anexo</button>` : ''}`)).join('') || '<div class="vazio">—</div>');
     el.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
       const a = await pedirAssinatura('Autorizar solicitação', 'Assine para autorizar.'); if (!a) return;
-      try { await U.db(window.sb.rpc('rh_decidir', { p_id: b.dataset.ok, p_aprovar: true, p_obs: null, p_assinatura: a })); U.toast('Solicitação autorizada.'); autorizar(el); } catch (e) { U.erro(e); }
+      try {
+        await U.db(window.sb.rpc('rh_decidir', { p_id: b.dataset.ok, p_aprovar: true, p_obs: null, p_assinatura: a }));
+        const x = (await U.db(window.sb.from('rh_solicitacoes').select('*').eq('id', b.dataset.ok).limit(1)))[0] || {};
+        if (x.escala_status) avisoEscala(x.escala_status, x.escala_msg); else U.toast('Solicitação autorizada.');
+        autorizar(el);
+      } catch (e) { U.erro(e); }
+    });
+    el.querySelectorAll('[data-lan]').forEach(b => b.onclick = async () => {
+      if (!await U.confirmar('Lançar este pedido na escala agora?', 'Lançar')) return;
+      b.disabled = true;
+      try { const x = await U.db(window.sb.rpc('rh_lancar_escala', { p_id: b.dataset.lan })); avisoEscala(x.status, x.mensagem); autorizar(el); } catch (e) { U.erro(e); b.disabled = false; }
     });
     el.querySelectorAll('[data-no]').forEach(b => b.onclick = async () => {
       const m = await U.pedirMotivo('Recusar solicitação', 'Informe o motivo da recusa.'); if (!m) return;
@@ -158,7 +192,7 @@
         const a = await U.db(window.sb.from('rh_solicitacoes').select('id').eq('status', 'aguardando_colega').eq('segundo_matricula', U.ctx.matricula));
         U.pendencia('rh_ass', 'rh', 'ass', a.length, `${a.length === 1 ? '1 troca de plantão aguarda' : a.length + ' trocas de plantão aguardam'} a sua assinatura`);
         if (U.can('rh', 'editar')) {
-          const p = (await U.db(window.sb.from('rh_solicitacoes').select('id, criado_por').eq('status', 'pendente'))).filter(r => r.criado_por !== U.ctx.id);
+          const p = (await U.db(window.sb.from('rh_solicitacoes').select('id, criado_por, tipo, segundo_matricula, dados').eq('status', 'pendente'))).filter(r => !participa(r));
           U.pendencia('rh_aut', 'rh', 'aut', p.length, `${p.length === 1 ? '1 solicitação aguarda' : p.length + ' solicitações aguardam'} a sua autorização`);
         }
       });

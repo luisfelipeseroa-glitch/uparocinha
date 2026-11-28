@@ -637,10 +637,10 @@
         ${pessoas.map(c => `<tr><td class="esc-nome">${esc(c.nome)}<small>${esc(c.cargo)}</small></td>${meses.map(m => celula(c, m)).join('')}</tr>`).join('')}
         <tr class="esc-cob"><td class="esc-nome">Pessoas fora no mês</td>${meses.map(m => `<td><b>${new Set(L.filter(x => noMes(x, m)).map(x => x.colaborador_id)).size || ''}</b></td>`).join('')}</tr></tbody></table></div>` : ''}
       <h3 style="margin-top:14px">Programações de ${ano}</h3>
-      ${U.tabela([{ t: 'Nome', f: x => esc(colab(x.colaborador_id).nome) }, { t: 'Tipo', f: x => esc(x.codigo) }, { t: 'Período', f: x => `${U.fmtData(x.inicio)} a ${U.fmtData(x.fim)}<br><small>${corridos(x.inicio, x.fim)} dias corridos</small>` },
+      ${U.tabela([{ t: 'Nome', f: x => esc(colab(x.colaborador_id).nome) }, { t: 'Tipo', f: x => esc(x.codigo) }, { t: 'Período', f: x => `${U.fmtData(x.inicio)} a ${U.fmtData(x.fim)}<br><small>${corridos(x.inicio, x.fim)} dias corridos · ${x.todos_os_dias === false ? 'só plantões' : 'todos os dias'}</small>` },
         { t: 'Observação', f: x => esc(x.observacao || '—') }, { t: 'Cadastrado por', f: x => esc(x.criado_por_nome || '—') },
         { t: '', f: x => S.editor ? `<button class="btn btn-ghost" data-canc="${x.id}"><i class="fas fa-xmark"></i> Cancelar</button>` : '' }], L, 'Nenhuma programação neste ano.')}
-      <div class="ajuda">Cadastre o período uma vez: os plantões já lançados mudam na hora e os próximos meses já nascem preenchidos quando forem gerados. Cancelar devolve os plantões.</div>`;
+      <div class="ajuda">Cadastre o período uma vez: os dias aparecem na escala na hora, inclusive em meses ainda vazios. Cancelar desfaz e devolve os plantões.</div>`;
     const dest = () => abaFerias(corpo);
     corpo.querySelector('#fe-ant').onclick = () => { corpo.dataset.ano = ano - 1; dest(); };
     corpo.querySelector('#fe-prox').onclick = () => { corpo.dataset.ano = ano + 1; dest(); };
@@ -648,9 +648,9 @@
     if (S.editor) corpo.querySelector('#fe-nova').onclick = () => dlgProgramar(setor, async inicio => { corpo.dataset.ano = inicio.slice(0, 4); await carregarMes(); await dest(); });
     corpo.querySelectorAll('[data-canc]').forEach(b => b.onclick = async () => {
       const x = L.find(y => y.id === +b.dataset.canc);
-      const mot = await U.pedirMotivo('Cancelar programação', `${colab(x.colaborador_id).nome}: ${U.fmtData(x.inicio)} a ${U.fmtData(x.fim)}. Os plantões que estavam no lugar voltam.`);
+      const mot = await U.pedirMotivo('Cancelar programação', `${colab(x.colaborador_id).nome}: ${U.fmtData(x.inicio)} a ${U.fmtData(x.fim)}. Os dias marcados são desfeitos e os plantões que havia voltam.`);
       if (!mot) return;
-      try { const n = await U.db(window.sb.rpc('esc_cancelar_programacao', { p_id: x.id, p_motivo: mot })); U.toast(`Programação cancelada. ${n} plantão(ões) devolvido(s).`); await carregarMes(); await dest(); } catch (e) { U.erro(e); }
+      try { const n = await U.db(window.sb.rpc('esc_cancelar_programacao', { p_id: x.id, p_motivo: mot })); U.toast(`Programação cancelada. ${n} dia(s) desfeito(s).`); await carregarMes(); await dest(); } catch (e) { U.erro(e); }
     });
   }
   function dlgProgramar(setor, depois) {
@@ -662,13 +662,14 @@
         <label class="fl">Tipo *</label><select id="g-cod">${cods.map(k => `<option value="${esc(k.codigo)}">${esc(k.codigo)} — ${esc(k.descricao)}</option>`).join('')}</select>
         <div class="grade2"><div><label class="fl">Primeiro dia *</label><input type="date" id="g-ini"></div><div><label class="fl">Último dia *</label><input type="date" id="g-fim"></div></div>
         <div class="ajuda" id="g-conta"></div>
+        <label class="fl">Em quais dias marcar *</label><select id="g-dias"><option value="todos">Todos os dias do período</option><option value="plantao">Só nos dias de plantão da pessoa</option></select>
         <label class="fl">Observação</label><textarea id="g-obs" rows="2" maxlength="300" placeholder="Ex.: período aquisitivo 2025/2026"></textarea>`,
       botoes: [{ rotulo: 'Cancelar' }, { rotulo: 'Salvar programação', classe: 'btn-primary', acao: async el => {
         const q = x => el.querySelector(x), quem = +q('#g-quem').value, ini = q('#g-ini').value, fim = q('#g-fim').value;
         if (!quem) { U.toast('Escolha a pessoa.', 'erro'); return false; }
         if (!ini || !fim || fim < ini) { U.toast('Confira as datas.', 'erro'); return false; }
-        const r = await U.db(window.sb.rpc('esc_programar', { p_colab: quem, p_codigo: q('#g-cod').value, p_inicio: ini, p_fim: fim, p_obs: q('#g-obs').value }));
-        U.toast(`Programação salva. ${r.aplicados} plantão(ões) já lançado(s) foram marcados.`);
+        const r = await U.db(window.sb.rpc('esc_programar', { p_colab: quem, p_codigo: q('#g-cod').value, p_inicio: ini, p_fim: fim, p_obs: q('#g-obs').value, p_todos: q('#g-dias').value === 'todos' }));
+        U.toast(r.aplicados ? `Programação salva. ${r.aplicados} dia(s) marcado(s) a partir de ${U.fmtData(ini)}.` : 'Programação salva, mas nenhum dia foi marcado: não há plantão conhecido. Cancele e escolha "Todos os dias do período".', r.aplicados ? undefined : 'erro');
         await depois(ini);
         if (r.conflitos && r.conflitos.length) U.modal({ titulo: 'Atenção: confira estes dias', largura: 460,
           corpo: `<p>${esc(colab(quem).nome)} tem troca, cobertura ou extra dentro do período. Estes dias <b>não foram mudados</b>:</p><ul style="margin:8px 0 0 18px">${r.conflitos.map(x => `<li>${U.fmtData(x.data)}: ${esc(x.codigo)} (${esc(ORIGEM_NOME[x.origem] || x.origem)})</li>`).join('')}</ul>`, botoes: [{ rotulo: 'Entendi', classe: 'btn-primary' }] });
@@ -679,10 +680,12 @@
     /* ao escolher o primeiro dia, sugere 30 dias */
     ini.addEventListener('change', () => { if (ini.value && (!fim.value || fim.value < ini.value)) fim.value = somaDias(ini.value, 29); conta(); });
     fim.addEventListener('change', conta);
+    /* quem é de 12x36 ou ciclo costuma marcar só os dias de plantão */
+    el.querySelector('#g-quem').addEventListener('change', e => { const c = colab(+e.target.value); el.querySelector('#g-dias').value = c && ['par', 'impar', 'ciclo'].includes(c.gerar) ? 'plantao' : 'todos'; });
   }
 
   /* ---------- aba: pendências ---------- */
-  const AUSENCIAS = ['FER', 'AFT', 'AT', 'LIC', 'FT'];
+  const AUSENCIAS = ['FER', 'AFT', 'AT', 'LIC', 'FT', 'BH'];
   function diaDaEscala(c, data) {
     const d = +data.slice(8), wd = dow(+data.slice(0, 4), +data.slice(5, 7), d);
     if (c.gerar === 'par') return d % 2 === 0;
@@ -745,7 +748,12 @@
     const ini = new Date(Date.now() - 7 * 864e5).toISOString();
     const alts = await U.db(window.sb.from('esc_alteracoes').select('*').in('colaborador_id', S.meus).gte('em', ini).order('em', { ascending: false }).limit(20)).catch(() => []);
     let h = '';
-    if (alts.length) h += `<div class="ajuda" style="background:#FEF3C7;color:#78350F;padding:8px 10px;border-radius:8px;margin-bottom:10px"><b>Alterações recentes na sua escala</b><br>${alts.map(a => `${U.fmtDH(a.em)} — ${esc(descAlt(a))} (por ${esc(a.por_nome || '—')}${a.motivo ? ': ' + esc(a.motivo) : ''})`).join('<br>')}</div>`;
+    const chaveVisto = 'upa-esc-visto-' + (U.ctx.matricula || '');
+    let visto = ''; try { visto = localStorage.getItem(chaveVisto) || ''; } catch (e) { /* segue */ }
+    const novas = alts.filter(a => !visto || Date.parse(a.em) > Date.parse(visto));
+    if (novas.length) h += `<details id="mi-alt" style="background:#FEF3C7;color:#78350F;padding:8px 10px;border-radius:8px;margin-bottom:10px;font-size:12px"><summary style="cursor:pointer"><b>${novas.length >= 20 ? '20 ou mais alterações recentes' : novas.length === 1 ? '1 alteração recente' : novas.length + ' alterações recentes'} na sua escala</b> — toque para ver</summary>
+      <div style="max-height:180px;overflow:auto;margin:8px 0">${novas.map(a => `${U.fmtDH(a.em)} — ${esc(descAlt(a))} (por ${esc(a.por_nome || '—')}${a.motivo ? ': ' + esc(a.motivo) : ''})`).join('<br>')}</div>
+      <button type="button" class="btn btn-ghost" id="mi-visto">Já vi, ocultar</button></details>`;
     S.meus.forEach(id => {
       const c = colab(id); if (!c) return;
       const dias = ndias(S.ano, S.mes), off = dow(S.ano, S.mes, 1), hoje = U.hojeISO();
@@ -761,6 +769,8 @@
         ${prox.length ? `<div style="margin-bottom:8px"><b>Próximos plantões:</b> ${prox.map(l => `${U.fmtData(l.data)} (${esc(l.codigo)})`).join(' · ')}</div>` : ''}<div class="esc-cal">${cal}</div>`;
     });
     corpo.innerHTML = h + legendaHtml();
+    const bv = corpo.querySelector('#mi-visto');
+    if (bv) bv.onclick = () => { try { localStorage.setItem(chaveVisto, novas[0].em); } catch (e) { /* segue */ } corpo.querySelector('#mi-alt').remove(); };
   }
   function descAlt(a) {
     const j = x => x ? (x.codigo ? x.codigo : x.equipe !== undefined ? 'equipe ' + (x.equipe || '—') : '') : '';
